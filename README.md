@@ -23,10 +23,10 @@
 It supports both **Eye-in-Hand** (camera on tool) and **Eye-to-Hand** (fixed camera) configurations, enabling ultra-precise Pick-and-Place, SMD alignment, and dynamic trajectory adjustment.
 
 ### Key Features:
-* 🎯 **Sub-micrometric Correction:** Dynamic adjustment based on real-time visual fiducials.
-* 🔄 **Closed-Loop Control:** Continuous feedback loop bypassing the high-level orchestrator for low latency.
-* 📐 **Pose Estimation:** 6-DOF object pose estimation from single or multi-camera views.
-* ⚡ **Hardware Accelerated:** Uses Hailo-8 output for instant coordinate calculation.
+* ✅ **Real v0 - PBVS correction law:** `pose.py` + `servo.py` compute the pose delta between a current and target 6-DOF pose (shortest-turn angle wrapping, no gimbal-lock-prone long way around) and turn it into a proportional velocity command, clamped without distorting its direction. Exposed via the `correct` subcommand below - no camera or NPU needed to run or test it.
+* 🔄 **Closed-Loop Control:** Continuous feedback loop bypassing the high-level orchestrator for low latency. *(architecture goal - the gRPC feed to the HYDRA-UMC core is still future work.)*
+* 📐 **Pose Estimation:** 6-DOF object pose estimation from single or multi-camera views. *(future work - needs the real Hailo-8 NPU this repo doesn't have access to yet.)*
+* ⚡ **Hardware Accelerated:** Uses Hailo-8 output for instant coordinate calculation. *(future work, same reason.)*
 
 ---
 
@@ -49,7 +49,7 @@ flowchart LR
 
 * **Why this API has no hardware/firmware of its own.** It runs entirely on the shared CM5 + Hailo-8 module owned by the integration parent, HYDRA-UMC-VISION-NODE - no board of its own to design, so `hardware/`/`firmware/`/`os/` were pruned rather than left empty.
 * **Why it's a sibling, not a submodule, of HYDRA-UMC-VISION-NODE.** Pose correction runs as its own process/deployable so a crash or slow inference cycle here can't stall the parent's own detection pipeline, which HYDRA-UMC-SAFETY-ZONES depends on for E-STOP timing.
-* **Why the entry point only prints identity/version/role today.** Andamiaje (scaffolding) stage: proving the package installs, compiles and imports cleanly is a prerequisite for the real 6-DOF pose-correction math that lands later.
+* **Why the correction law ships before pose estimation.** Turning a pose *pair* into a bounded velocity command is pure control-theory math - it needs no camera or NPU to write or test, so v0 lands that piece (`pose.py`, `servo.py`) first. Real 6-DOF pose *estimation* needs the Hailo-8 hardware this environment doesn't have, and lands later.
 * **How this fits the rest of the ecosystem.** Sits downstream of perception (HYDRA-UMC-VISION-NODE) and upstream of motion (HYDRA-UMC firmware) - turns detected offsets into the kinematic corrections the robot arm's own jog/servo loop applies.
 
 ---
@@ -63,13 +63,18 @@ live only in the integration parent, `HYDRA-UMC-VISION-NODE`.
 ```text
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Source code (hydra_umc_visual_servoing_api package)
+│   └── hydra_umc_visual_servoing_api/
+│       ├── pose.py      # Pose6D - 6-DOF pose (x, y, z, roll, pitch, yaw)
+│       ├── servo.py     # PBVS pose-error + velocity-command correction law
+│       └── main.py      # CLI entry point (bare invocation + `correct`)
+├── tests/               # Real pytest suite (pose, servo, CLI)
 ├── docs/                # Documentation and kinematic theory
 ├── build/               # Build output (local .venv lives here too)
 ├── images/              # Media and diagrams
 ├── scripts/             # Utility scripts
 ├── pyproject.toml       # Package metadata, dependencies, odometer version
 ├── bump_version.py      # Odometer-style version bump (run by build.sh/.bat)
-├── build.sh / build.bat # venv + editable install + compile-check
+├── build.sh / build.bat # venv + editable install + compile-check + tests
 └── run.sh / run.bat     # Runs the entry point from the local venv
 ```
 
@@ -82,7 +87,8 @@ Requires Python 3.10+.
 ```bash
 # Linux / macOS
 ./build.sh   # bumps the odometer version, creates .venv, installs the
-             # package editable, compile-checks every file under src/
+             # package editable (with dev extras), compile-checks every
+             # file under src/, and runs the real pytest suite
 ./run.sh     # runs the entry point from .venv, prints name + version + role
 ```
 
@@ -97,7 +103,28 @@ using the ecosystem-wide "odometer" rule (PATCH+1, carrying into MINOR past
 9) before every real build, then compile-check the source with
 `python -m compileall`.
 
+Real example - compute the correction from a current pose to a target one:
+
+```bash
+./run.sh correct --current "0,0,0.5,0,0,0" --target "0.02,-0.01,0.48,0,0,0.05" \
+  --gain 0.8 --max-linear-speed 0.05
+# pose error   : dx=0.020000 dy=-0.010000 dz=-0.020000  droll=0.000000 dpitch=0.000000 dyaw=0.050000
+# error norm   : linear=0.030000 m  angular=0.050000 rad
+# velocity cmd : vx=0.016000 vy=-0.008000 vz=-0.016000  wroll=0.000000 wpitch=0.000000 wyaw=0.040000
+# converged    : False
+```
+
 ---
+
+## ✅ Current Status & Next Steps
+
+**Real today:** the PBVS pose-error and velocity-command correction law
+(`pose.py`, `servo.py`) - the "Error Calculation (Pose Delta)" step in
+the loop diagram above - with 15 tests and a real `correct` CLI command.
+
+**Still ahead, and blocked on real hardware:** 6-DOF pose *estimation*
+from camera frames (needs the Hailo-8 NPU), and the low-latency gRPC
+feed of the resulting velocity command to the HYDRA-UMC core.
 
 ## 🚀 ROADMAP
 * **Phase 1:** Multi-camera pipeline synchronization and calibration for 8x USB 3.0 feeds.

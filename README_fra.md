@@ -23,10 +23,10 @@
 Il prend en charge les configurations **Eye-in-Hand** (caméra sur l'outil) et **Eye-to-Hand** (caméra fixe), permettant un Pick-and-Place d'ultra-précision, un alignement CMS et un ajustement dynamique de la trajectoire.
 
 ### Caractéristiques principales :
-* 🎯 **Correction sub-micrométrique :** Ajustement dynamique basé sur des repères visuels en temps réel.
-* 🔄 **Contrôle en boucle fermée :** Boucle de rétroaction continue contournant l'orchestrateur de haut niveau pour une faible latence.
-* 📐 **Estimation de la pose :** Estimation de la pose d'objet 6-DOF à partir de vues à caméra unique ou multiple.
-* ⚡ **Accélération matérielle :** Utilise la sortie Hailo-8 pour le calcul instantané des coordonnées.
+* ✅ **Réel v0 - loi de correction PBVS :** `pose.py` + `servo.py` calculent le delta de pose entre une pose actuelle et une pose cible (enroulement angulaire par le plus court chemin, sans le long détour propice au blocage de cardan) et le transforment en commande de vitesse proportionnelle, plafonnée sans en déformer la direction. Exposé via la sous-commande `correct` ci-dessous - aucune caméra ni NPU nécessaire pour l'exécuter ou la tester.
+* 🔄 **Contrôle en boucle fermée :** Boucle de rétroaction continue contournant l'orchestrateur de haut niveau pour une faible latence. *(objectif d'architecture - l'envoi gRPC vers le cœur HYDRA-UMC reste un travail futur.)*
+* 📐 **Estimation de la pose :** Estimation de la pose d'objet 6-DOF à partir de vues à caméra unique ou multiple. *(travail futur - nécessite la NPU Hailo-8 réelle que cet environnement n'a pas encore.)*
+* ⚡ **Accélération matérielle :** Utilise la sortie Hailo-8 pour le calcul instantané des coordonnées. *(travail futur, même raison.)*
 
 ---
 
@@ -49,7 +49,7 @@ flowchart LR
 
 * **Pourquoi cette API n'a pas de matériel/firmware propre.** Elle tourne entièrement sur le module CM5 + Hailo-8 partagé que possède le parent d'intégration, HYDRA-UMC-VISION-NODE - aucune carte propre à concevoir ici, donc `hardware/`/`firmware/`/`os/` ont été supprimés plutôt que laissés vides.
 * **Pourquoi c'est une sœur, pas un sous-module, de HYDRA-UMC-VISION-NODE.** La correction de pose tourne comme son propre processus/déploiement pour qu'un plantage ou un cycle d'inférence lent ici ne puisse pas bloquer le propre pipeline de détection du parent, dont dépend HYDRA-UMC-SAFETY-ZONES pour le timing de l'E-STOP.
-* **Pourquoi le point d'entrée ne fait qu'imprimer identité/version/rôle aujourd'hui.** Étape d'andamiaje (échafaudage) : prouver que le paquet s'installe, compile et s'importe proprement est un prérequis pour les vraies corrections de pose cinématique à 6 degrés de liberté qui arriveront plus tard.
+* **Pourquoi la loi de correction arrive avant l'estimation de pose.** Transformer une paire de poses en une commande de vitesse plafonnée est de la pure mathématique de théorie du contrôle - inutile d'avoir une caméra ou un NPU pour l'écrire ou la tester, donc v0 livre cette pièce (`pose.py`, `servo.py`) en premier. La vraie estimation de pose à 6 degrés de liberté nécessite le matériel Hailo-8 que cet environnement n'a pas, et arrivera plus tard.
 * **Comment cela s'intègre dans le reste de l'écosystème.** Se situe en aval de la perception (HYDRA-UMC-VISION-NODE) et en amont du mouvement (firmware HYDRA-UMC) - transforme les décalages détectés en corrections cinématiques que la propre boucle jog/servo du bras robotique applique.
 
 ---
@@ -64,13 +64,18 @@ projet ne comporte pas de dossier `hardware/` ni `firmware/`. `os/` et
 ```text
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Code source (paquet hydra_umc_visual_servoing_api)
+│   └── hydra_umc_visual_servoing_api/
+│       ├── pose.py      # Pose6D - pose à 6-DOF (x, y, z, roll, pitch, yaw)
+│       ├── servo.py     # Loi de correction PBVS : erreur de pose + commande de vitesse
+│       └── main.py      # Point d'entrée CLI (invocation nue + `correct`)
+├── tests/               # Suite pytest réelle (pose, servo, CLI)
 ├── docs/                # Documentation et théorie cinématique
 ├── build/               # Sortie de build (le .venv local y vit aussi)
 ├── images/              # Médias et diagrammes
 ├── scripts/             # Scripts utilitaires
 ├── pyproject.toml       # Métadonnées du paquet, dépendances, version compteur
 ├── bump_version.py      # Incrément de version type compteur (build.sh/.bat)
-├── build.sh / build.bat # venv + installation éditable + compile-check
+├── build.sh / build.bat # venv + installation éditable + compile-check + tests
 └── run.sh / run.bat     # Exécute le point d'entrée depuis le venv local
 ```
 
@@ -83,7 +88,8 @@ Nécessite Python 3.10+.
 ```bash
 # Linux / macOS
 ./build.sh   # incrémente la version compteur, crée .venv, installe le
-             # paquet en mode éditable, compile-check tout src/
+             # paquet en mode éditable (avec les extras dev), compile-check
+             # tout src/, et exécute la suite pytest réelle
 ./run.sh     # exécute le point d'entrée depuis .venv, affiche nom + version + rôle
 ```
 
@@ -98,7 +104,30 @@ projet selon la règle "compteur kilométrique" de l'écosystème (PATCH+1,
 avec report sur MINOR au-delà de 9) avant chaque build réel, puis
 effectuent un compile-check du code source avec `python -m compileall`.
 
+Exemple réel - calculer la correction d'une pose actuelle vers une pose cible :
+
+```bash
+./run.sh correct --current "0,0,0.5,0,0,0" --target "0.02,-0.01,0.48,0,0,0.05" \
+  --gain 0.8 --max-linear-speed 0.05
+# pose error   : dx=0.020000 dy=-0.010000 dz=-0.020000  droll=0.000000 dpitch=0.000000 dyaw=0.050000
+# error norm   : linear=0.030000 m  angular=0.050000 rad
+# velocity cmd : vx=0.016000 vy=-0.008000 vz=-0.016000  wroll=0.000000 wpitch=0.000000 wyaw=0.040000
+# converged    : False
+```
+
 ---
+
+## ✅ État Actuel et Prochaines Étapes
+
+**Réel aujourd'hui :** la loi de correction PBVS d'erreur de pose et de
+commande de vitesse (`pose.py`, `servo.py`) - l'étape « Calcul d'erreur
+(Pose Delta) » du diagramme de boucle ci-dessus - avec 15 tests et une
+vraie commande CLI `correct`.
+
+**Encore à venir, et bloqué par du matériel réel :** l'estimation réelle
+de pose à 6 degrés de liberté à partir d'images caméra (nécessite la NPU
+Hailo-8), et l'envoi gRPC à faible latence de la commande de vitesse
+résultante vers le cœur HYDRA-UMC.
 
 ## 🚀 ROADMAP
 * **Phase 1 :** Synchronisation et étalonnage du pipeline multi-caméras pour 8 flux USB 3.0.

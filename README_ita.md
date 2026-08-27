@@ -23,10 +23,10 @@
 Supporta configurazioni **Eye-in-Hand** (telecamera sullo strumento) ed **Eye-to-Hand** (telecamera fissa), consentendo Pick-and-Place ad altissima precisione, allineamento SMD e regolazione dinamica della traiettoria.
 
 ### Caratteristiche principali:
-* 🎯 **Correzione sub-micrometrica:** Regolazione dinamica basata su fiduciali visivi in tempo reale.
-* 🔄 **Controllo a circuito chiuso:** Feedback continuo che bypassa l'orchestratore di alto livello per una bassa latenza.
-* 📐 **Stima della posa:** Stima della posa dell'oggetto 6-DOF da viste a telecamera singola o multipla.
-* ⚡ **Accelerazione hardware:** Utilizza l'output di Hailo-8 per il calcolo istantaneo delle coordinate.
+* ✅ **Reale v0 - legge di correzione PBVS:** `pose.py` + `servo.py` calcolano il delta di posa tra una posa attuale e una obiettivo (con avvolgimento angolare per il giro più breve, senza il lungo giro che favorisce il blocco cardanico) e lo trasformano in un comando di velocità proporzionale, limitato senza distorcerne la direzione. Esposto tramite il sottocomando `correct` più sotto - non serve telecamera né NPU per eseguirlo o testarlo.
+* 🔄 **Controllo a circuito chiuso:** Feedback continuo che bypassa l'orchestratore di alto livello per una bassa latenza. *(obiettivo architetturale - l'invio gRPC al core HYDRA-UMC resta lavoro futuro.)*
+* 📐 **Stima della posa:** Stima della posa dell'oggetto 6-DOF da viste a telecamera singola o multipla. *(lavoro futuro - richiede la vera NPU Hailo-8 che questo ambiente non ha ancora.)*
+* ⚡ **Accelerazione hardware:** Utilizza l'output di Hailo-8 per il calcolo istantaneo delle coordinate. *(lavoro futuro, stesso motivo.)*
 
 ---
 
@@ -49,7 +49,7 @@ flowchart LR
 
 * **Perché questa API non ha hardware/firmware propri.** Gira interamente sul modulo condiviso CM5 + Hailo-8 posseduto dal genitore di integrazione, HYDRA-UMC-VISION-NODE - nessuna scheda propria da progettare qui, quindi `hardware/`/`firmware/`/`os/` sono state rimosse invece di lasciarle vuote.
 * **Perché è sorella, non un sottomodulo, di HYDRA-UMC-VISION-NODE.** La correzione di posa gira come proprio processo/deployment così che un crash o un ciclo di inferenza lento qui non possa bloccare la pipeline di rilevamento del genitore, da cui dipende HYDRA-UMC-SAFETY-ZONES per il timing dell'E-STOP.
-* **Perché il punto di ingresso oggi stampa solo identità/versione/ruolo.** Fase di andamiaje (scaffolding): dimostrare che il pacchetto si installa, compila e importa in modo pulito è un prerequisito per le vere correzioni cinematiche di posa a 6 gradi di libertà che arriveranno più avanti.
+* **Perché la legge di correzione arriva prima della stima della posa.** Trasformare una coppia di pose in un comando di velocità limitato è pura matematica di teoria del controllo - non serve telecamera né NPU per scriverla o testarla, quindi v0 consegna prima questo pezzo (`pose.py`, `servo.py`). La vera stima di posa a 6 gradi di libertà richiede l'hardware Hailo-8 che questo ambiente non ha, e arriverà più avanti.
 * **Come si inserisce nel resto dell'ecosistema.** Si colloca a valle della percezione (HYDRA-UMC-VISION-NODE) e a monte del movimento (firmware HYDRA-UMC) - trasforma gli scostamenti rilevati nelle correzioni cinematiche che il ciclo jog/servo del braccio robotico applica.
 
 ---
@@ -63,13 +63,18 @@ vivono solo nel padre di integrazione, `HYDRA-UMC-VISION-NODE`.
 ```text
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Codice sorgente (pacchetto hydra_umc_visual_servoing_api)
+│   └── hydra_umc_visual_servoing_api/
+│       ├── pose.py      # Pose6D - posa a 6-DOF (x, y, z, roll, pitch, yaw)
+│       ├── servo.py     # Legge di correzione PBVS: errore di posa + comando di velocità
+│       └── main.py      # Entry point CLI (invocazione nuda + `correct`)
+├── tests/               # Suite pytest reale (pose, servo, CLI)
 ├── docs/                # Documentazione e teoria cinematica
 ├── build/               # Output di build (qui vive anche il .venv locale)
 ├── images/              # Media e diagrammi
 ├── scripts/             # Script di utilità
 ├── pyproject.toml       # Metadati del pacchetto, dipendenze, versione a contachilometri
 ├── bump_version.py      # Incremento versione a contachilometri (build.sh/.bat)
-├── build.sh / build.bat # venv + installazione editabile + compile-check
+├── build.sh / build.bat # venv + installazione editabile + compile-check + test
 └── run.sh / run.bat     # Esegue l'entry point dal venv locale
 ```
 
@@ -82,7 +87,8 @@ Richiede Python 3.10+.
 ```bash
 # Linux / macOS
 ./build.sh   # incrementa la versione a contachilometri, crea .venv, installa
-             # il pacchetto in modo editabile, compile-check di tutto src/
+             # il pacchetto in modo editabile (con extra dev), compile-check
+             # di tutto src/, ed esegue la suite pytest reale
 ./run.sh     # esegue l'entry point dal .venv, stampa nome + versione + ruolo
 ```
 
@@ -97,7 +103,30 @@ questo progetto seguendo la regola "a contachilometri" dell'ecosistema
 (PATCH+1, con riporto su MINOR oltre il 9) prima di ogni build reale, poi
 eseguono il compile-check del codice sorgente con `python -m compileall`.
 
+Esempio reale - calcolare la correzione da una posa attuale a una obiettivo:
+
+```bash
+./run.sh correct --current "0,0,0.5,0,0,0" --target "0.02,-0.01,0.48,0,0,0.05" \
+  --gain 0.8 --max-linear-speed 0.05
+# pose error   : dx=0.020000 dy=-0.010000 dz=-0.020000  droll=0.000000 dpitch=0.000000 dyaw=0.050000
+# error norm   : linear=0.030000 m  angular=0.050000 rad
+# velocity cmd : vx=0.016000 vy=-0.008000 vz=-0.016000  wroll=0.000000 wpitch=0.000000 wyaw=0.040000
+# converged    : False
+```
+
 ---
+
+## ✅ Stato Attuale e Prossimi Passi
+
+**Reale oggi:** la legge di correzione PBVS di errore di posa e comando
+di velocità (`pose.py`, `servo.py`) - il passaggio "Calcolo dell'errore
+(Pose Delta)" del diagramma del loop qui sopra - con 15 test e un
+comando CLI `correct` reale.
+
+**Ancora da fare, bloccato da hardware reale:** la vera stima di posa a
+6 gradi di libertà da fotogrammi della telecamera (richiede la NPU
+Hailo-8), e l'invio gRPC a bassa latenza del comando di velocità
+risultante al core HYDRA-UMC.
 
 ## 🚀 ROADMAP
 * **Fase 1:** Sincronizzazione e calibrazione della pipeline multi-camera per 8 ingressi USB 3.0.

@@ -16,4 +16,4 @@ else
   exit 1
 fi
 
-exec "$VENV_PY" -m hydra_umc_visual_servoing_api.main
+exec "$VENV_PY" -m hydra_umc_visual_servoing_api.main "$@"

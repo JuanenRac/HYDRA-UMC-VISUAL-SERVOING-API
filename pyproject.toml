@@ -1,16 +1,20 @@
 [project]
 name = "hydra-umc-visual-servoing-api"
-version = "0.0.1"
+version = "0.0.2"
 description = "Closed-loop kinematic correction service that turns Hailo-8 visual feedback into real-time pose corrections for the HYDRA-UMC core, supporting Eye-in-Hand and Eye-to-Hand configurations."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-only" }
 authors = [{ name = "JuanenRac", email = "electrohobby3d@gmail.com" }]
-# No runtime dependencies yet - this is the skeleton stage (see
-# SONNET/HYDRA-UMC-VISUAL-SERVOING-API/mejoras_futuras.txt). Planned once
-# real business logic lands: numpy (pose/IK math), grpcio (low-latency
-# feed towards HYDRA-UMC core), scipy (6-DOF pose estimation).
+# No runtime dependencies yet - the v0 PBVS correction law (pose.py,
+# servo.py) is plain Python math. Still planned once the rest of the
+# pipeline lands: grpcio (low-latency feed towards HYDRA-UMC core),
+# scipy/numpy if a future pass needs real 6-DOF pose *estimation* math
+# rather than just differencing poses the Hailo-8 already estimated.
 dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
 
 [project.scripts]
 hydra-umc-visual-servoing-api = "hydra_umc_visual_servoing_api.main:main"

@@ -1,1 +1,0 @@
-hydra_umc_visual_servoing_api

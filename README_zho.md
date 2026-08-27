@@ -26,10 +26,10 @@
 摄像头）两种配置，实现超精密抓取放置、SMD 对位和动态轨迹调整。
 
 ### 关键特性：
-* 🎯 **亚微米级修正：** 基于实时视觉基准点的动态调整。
-* 🔄 **闭环控制：** 持续反馈回路，绕过高层编排器以降低延迟。
-* 📐 **位姿估计：** 从单摄像头或多摄像头视角进行 6 自由度物体位姿估计。
-* ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。
+* ✅ **真实 v0 —— PBVS 修正律：** `pose.py` + `servo.py` 计算当前位姿与目标位姿之间的位姿增量（角度按最短路径环绕，不走容易导致万向节死锁的长路），并将其转化为比例速度指令，限幅时不改变其方向。通过下面的 `correct` 子命令暴露——运行或测试都不需要摄像头或 NPU。
+* 🔄 **闭环控制：** 持续反馈回路，绕过高层编排器以降低延迟。*（架构目标——向 HYDRA-UMC 核心的 gRPC 传输仍是未来工作。）*
+* 📐 **位姿估计：** 从单摄像头或多摄像头视角进行 6 自由度物体位姿估计。*（未来工作——需要本环境尚不具备的真实 Hailo-8 NPU。）*
+* ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。*（未来工作，原因相同。）*
 
 ---
 
@@ -52,7 +52,7 @@ flowchart LR
 
 * **为什么本 API 没有自己的硬件/固件。** 它完全运行在集成父项目 HYDRA-UMC-VISION-NODE 所拥有的共享 CM5 + Hailo-8 模块上——没有需要自行设计的板卡，因此 `hardware/`/`firmware/`/`os/` 被直接省略，而非留空。
 * **为什么它是 HYDRA-UMC-VISION-NODE 的兄弟项目，而非子模块。** 位姿修正作为独立的进程/可部署单元运行，因此这里的崩溃或缓慢的推理周期不会拖累父项目自身的检测流水线，而 HYDRA-UMC-SAFETY-ZONES 依赖该流水线来确定 E-STOP 时机。
-* **为什么入口点今天只打印身份/版本/角色。** 处于脚手架（scaffolding）阶段：证明该包能够正确安装、编译并被导入，是后续真正的 6 自由度位姿修正数学落地的前提条件。
+* **为什么修正律先于位姿估计落地。** 将一对位姿转化为受限速度指令是纯粹的控制理论数学——编写和测试都不需要摄像头或 NPU，因此 v0 优先交付这一部分（`pose.py`、`servo.py`）。真正的 6 自由度位姿*估计*需要本环境尚不具备的 Hailo-8 硬件，将在后续落地。
 * **这如何融入生态系统的其余部分。** 位于感知（HYDRA-UMC-VISION-NODE）的下游、运动（HYDRA-UMC 固件）的上游——将检测到的偏移转化为机械臂自身点动/伺服回路所应用的运动学修正。
 
 ---
@@ -66,13 +66,18 @@ CM5 + Hailo-8 是现成硬件，没有自己的板卡，因此本项目不携带
 ```text
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # 源代码（hydra_umc_visual_servoing_api 包）
+│   └── hydra_umc_visual_servoing_api/
+│       ├── pose.py      # Pose6D —— 6 自由度位姿（x, y, z, roll, pitch, yaw）
+│       ├── servo.py     # PBVS 修正律：位姿误差 + 速度指令
+│       └── main.py      # CLI 入口点（裸调用 + `correct`）
+├── tests/               # 真实 pytest 套件（pose、servo、CLI）
 ├── docs/                # 文档与运动学理论
 ├── build/               # 构建输出（本地 .venv 也存放于此）
 ├── images/              # 媒体与图表
 ├── scripts/             # 实用脚本
 ├── pyproject.toml       # 包元数据、依赖项、里程表版本号
 ├── bump_version.py      # 里程表式版本递增（由 build.sh/.bat 运行）
-├── build.sh / build.bat # venv + 可编辑安装 + 编译检查
+├── build.sh / build.bat # venv + 可编辑安装 + 编译检查 + 测试
 └── run.sh / run.bat     # 从本地 venv 运行入口点
 ```
 
@@ -84,8 +89,9 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 
 ```bash
 # Linux / macOS
-./build.sh   # 递增里程表版本号，创建 .venv，以可编辑模式安装该包，
-             # 对 src/ 下的每个文件进行编译检查
+./build.sh   # 递增里程表版本号，创建 .venv，以可编辑模式（含 dev 附加项）
+             # 安装该包，对 src/ 下的每个文件进行编译检查，并运行真实的
+             # pytest 套件
 ./run.sh     # 从 .venv 运行入口点，打印名称 + 版本 + 角色
 ```
 
@@ -99,7 +105,28 @@ run.bat
 规则（PATCH+1，超过 9 时进位到 MINOR）递增本项目自身的 `pyproject.toml`
 版本号，然后使用 `python -m compileall` 对源代码进行编译检查。
 
+真实示例——计算从当前位姿到目标位姿的修正：
+
+```bash
+./run.sh correct --current "0,0,0.5,0,0,0" --target "0.02,-0.01,0.48,0,0,0.05" \
+  --gain 0.8 --max-linear-speed 0.05
+# pose error   : dx=0.020000 dy=-0.010000 dz=-0.020000  droll=0.000000 dpitch=0.000000 dyaw=0.050000
+# error norm   : linear=0.030000 m  angular=0.050000 rad
+# velocity cmd : vx=0.016000 vy=-0.008000 vz=-0.016000  wroll=0.000000 wpitch=0.000000 wyaw=0.040000
+# converged    : False
+```
+
 ---
+
+## ✅ 当前状态与后续步骤
+
+**今天的真实进展：** PBVS 位姿误差与速度指令修正律（`pose.py`、
+`servo.py`）——上方回路图中的“误差计算（位姿增量）”步骤——附带 15 个
+测试和一个真实的 `correct` CLI 命令。
+
+**仍待完成，受限于真实硬件：** 从摄像头画面进行真实的 6 自由度位姿*估计*
+（需要 Hailo-8 NPU），以及将计算出的速度指令以低延迟通过 gRPC 传输至
+HYDRA-UMC 核心。
 
 ## 🚀 路线图
 * **第一阶段：** 针对 8 路 USB 3.0 画面的多摄像头流水线同步与标定。
