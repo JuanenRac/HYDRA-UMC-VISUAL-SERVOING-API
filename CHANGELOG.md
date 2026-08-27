@@ -18,6 +18,36 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.0.3] - Real v0: safety-gated authorization for visual corrections
+
+- **`src/hydra_umc_visual_servoing_api/authorization.py`** (new) - a
+  decision layer in front of the existing pure-math correction law:
+  `VisualTargetRequest` (current pose, target pose, frame id, detection
+  confidence, data age in ms, upstream `safety_state`) and
+  `AuthorizationPolicy` (`min_confidence`, `max_data_age_ms`) feed
+  `authorize_correction()`, which checks the safety precondition FIRST
+  (`safety_state != "READY"` -> `INHIBITED`, wins over everything else,
+  reusing the HYDRA-UMC-SDK's `SafetyState` vocabulary as a plain string
+  comparison rather than a runtime dependency), then confidence and data
+  freshness (`REJECTED` on either), and only computes the real pose error
+  and velocity command once all three pass (`ACCEPTED`). Boundary values
+  (`confidence == min_confidence`, `data_age_ms == max_data_age_ms`) count
+  as valid, matching the inclusive-boundary convention already used in
+  HYDRA-UMC-SAFETY-ZONES.
+- **`main.py`** - new `request --current X --target X --frame-id ID
+  --confidence C --data-age-ms MS --safety-state STATE
+  [--min-confidence C] [--max-data-age-ms MS] [--gain G]
+  [--max-linear-speed V] [--max-angular-speed W]` subcommand added
+  alongside the existing `correct` (left unchanged - `correct` stays the
+  low-level pure-math utility; `request` is the safety-gated,
+  camera-facing entry point). Exit codes: 0 (`ACCEPTED`), 1 (`REJECTED`),
+  2 (`INHIBITED`).
+- 20 new tests (`test_authorization.py`) plus 5 new CLI tests for the
+  `request` subcommand in `test_cli.py`. 40 tests total.
+- Still out of scope, and unchanged from the diagram below: real 6-DOF
+  pose *estimation* (needs the Hailo-8 NPU) and the low-latency gRPC
+  feed towards the HYDRA-UMC core.
+
 ## [0.0.2]
 
 - Build version synchronized with `hydra-umc.project.json` and the repository-native version source.

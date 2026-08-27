@@ -24,6 +24,7 @@ Sie unterstützt sowohl **Eye-in-Hand**- (Kamera am Werkzeug) als auch **Eye-to-
 
 ### Hauptmerkmale:
 * ✅ **Echtes v0 - PBVS-Korrekturgesetz:** `pose.py` + `servo.py` berechnen das Pose-Delta zwischen einer aktuellen und einer Ziel-Pose (Winkel werden über den kürzesten Weg gewickelt, nicht den langen, gimbal-lock-anfälligen Umweg) und wandeln es in einen proportionalen Geschwindigkeitsbefehl um, begrenzt ohne dessen Richtung zu verzerren. Über den unten stehenden Unterbefehl `correct` verfügbar - keine Kamera oder NPU nötig, um es auszuführen oder zu testen.
+* 🛡️ **Echtes v0 - sicherheitsgesperrte Autorisierung:** `authorization.py` verweigert die Umwandlung von Wahrnehmung in Bewegung, es sei denn, der vorgelagerte Sicherheitszustand ist `READY` und die visuellen Daten sind frisch/vertrauenswürdig genug. Über den neuen Unterbefehl `request` verfügbar - keine Kamera, NPU oder SAFETY-ZONES-Prozess nötig, um es auszuführen oder zu testen.
 * 🔄 **Closed-Loop-Steuerung:** Kontinuierliche Feedbackschleife, die den High-Level-Orchestrator für niedrige Latenz umgeht. *(Architekturziel - die gRPC-Übertragung an den HYDRA-UMC-Kern ist noch zukünftige Arbeit.)*
 * 📐 **Pose-Schätzung:** 6-DOF-Objektpose-Schätzung aus Einzel- oder Multi-Kamera-Ansichten. *(zukünftige Arbeit - benötigt die echte Hailo-8-NPU, die diese Umgebung noch nicht hat.)*
 * ⚡ **Hardware-beschleunigt:** Verwendet den Hailo-8-Ausgang für die sofortige Koordinatenberechnung. *(zukünftige Arbeit, gleicher Grund.)*
@@ -51,6 +52,8 @@ flowchart LR
 * **Warum sie Geschwister, kein Submodul, von HYDRA-UMC-VISION-NODE ist.** Die Posenkorrektur läuft als eigener Prozess/eigenes Deployment, damit ein Absturz oder ein langsamer Inferenzzyklus hier nie die eigene Erkennungs-Pipeline des Elternteils blockieren kann, von der HYDRA-UMC-SAFETY-ZONES für das E-STOP-Timing abhängt.
 * **Warum das Korrekturgesetz vor der Pose-Schätzung kommt.** Ein Pose-*Paar* in einen begrenzten Geschwindigkeitsbefehl umzuwandeln ist reine Regelungstheorie-Mathematik - dafür braucht es weder Kamera noch NPU zum Schreiben oder Testen, daher liefert v0 dieses Stück (`pose.py`, `servo.py`) zuerst. Die echte 6-Freiheitsgrad-Posenschätzung benötigt die Hailo-8-Hardware, die diese Umgebung nicht hat, und folgt später.
 * **Wie sich das ins restliche Ökosystem einfügt.** Sitzt stromabwärts der Wahrnehmung (HYDRA-UMC-VISION-NODE) und stromaufwärts der Bewegung (HYDRA-UMC-Firmware) - verwandelt erkannte Abweichungen in kinematische Korrekturen, die die eigene Jog-/Servo-Schleife des Roboterarms anwendet.
+* **Warum `authorize_correction()` `safety_state` vor Vertrauen/Aktualität prüft.** Ein Sicherheitsfehler muss über allem anderen stehen, selbst gegenüber einer perfekt frischen und vertrauenswürdigen Erkennung - daher wird `INHIBITED` (safety_state != "READY") zuerst geprüft und schneidet den Rest der Policy ab. Erst wenn bestätigt ist, dass sich der Arm sicher bewegen darf, zählt, ob die *Daten* vertrauenswürdig genug sind, ihn tatsächlich zu bewegen (`REJECTED` bei niedrigem Vertrauen oder veralteten Daten). Dies spiegelt dieselbe `INHIBITED`-vor-`DANGER`/`WARNING`-Priorität wider, die bereits in HYDRA-UMC-SAFETY-ZONES verwendet wird.
+* **Warum `request` ein neuer Unterbefehl ist statt `correct` zu ändern.** `correct` ist das bestehende Low-Level-Dienstprogramm, reine Mathematik (ohne Sicherheitsbewusstsein oder Konzept der Kamera-Aktualität) mit eigenen Aufrufern und Tests; es vor Ort in eine Sicherheitssperre einzuhüllen würde seinen Vertrag stillschweigend ändern. `request` fügt den gesperrten, kameraorientierten Einstiegspunkt hinzu, den Ökosystem-Code tatsächlich aufrufen sollte, während `correct` unverändert für die direkte Verwendung der Posen-Mathematik verfügbar bleibt.
 
 ---
 
@@ -65,17 +68,22 @@ hat dieses Projekt weder einen `hardware/`- noch einen `firmware/`-Ordner.
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Quellcode (Paket hydra_umc_visual_servoing_api)
 │   └── hydra_umc_visual_servoing_api/
-│       ├── pose.py      # Pose6D - 6-DOF-Pose (x, y, z, roll, pitch, yaw)
-│       ├── servo.py     # PBVS-Korrekturgesetz: Pose-Fehler + Geschwindigkeitsbefehl
-│       └── main.py      # CLI-Einstiegspunkt (nackter Aufruf + `correct`)
-├── tests/               # Echte pytest-Suite (Pose, Servo, CLI)
+│       ├── pose.py           # Pose6D - 6-DOF-Pose (x, y, z, roll, pitch, yaw)
+│       ├── servo.py          # PBVS-Korrekturgesetz: Pose-Fehler + Geschwindigkeitsbefehl
+│       ├── authorization.py  # Sicherheitsgesperrte Policy (INHIBITED/REJECTED/ACCEPTED)
+│       └── main.py           # CLI-Einstiegspunkt (nackter Aufruf + `correct` + `request`)
+├── tests/               # Echte pytest-Suite (Pose, Servo, Authorization, CLI)
 ├── docs/                # Dokumentation und Kinematiktheorie
 ├── build/               # Build-Ausgabe (hier lebt auch das lokale .venv)
 ├── images/              # Medien und Diagramme
 ├── scripts/             # Utility-Skripte
+├── tools/
+│   ├── build_test.py    # Nicht-versionierender Build-Check
+│   └── ci_validate.py   # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
 ├── pyproject.toml       # Paket-Metadaten, Abhängigkeiten, Kilometerzähler-Version
 ├── bump_version.py      # Kilometerzähler-Versionserhöhung (build.sh/.bat)
 ├── build.sh / build.bat # venv + editierbare Installation + Compile-Check + Tests
+├── build-test.sh / build-test.bat # Nicht-versionierender Build-Check
 └── run.sh / run.bat     # Führt den Einstiegspunkt aus dem lokalen venv aus
 ```
 
@@ -116,14 +124,36 @@ Echtes Beispiel - die Korrektur von einer aktuellen zu einer Ziel-Pose berechnen
 # converged    : False
 ```
 
+Echtes Beispiel - eine sicherheitsgesperrte Korrektur anfordern (akzeptiert, gesperrt und abgelehnt):
+
+```bash
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
+# outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
+# pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
+# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
+# outcome : INHIBITED - safety_state is 'FAULT', not 'READY'   (Exit-Code 2)
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.2 --data-age-ms 30 --safety-state READY
+# outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   (Exit-Code 1)
+```
+
 ---
 
 ## ✅ Aktueller Status und nächste Schritte
 
 **Heute real:** das PBVS-Korrekturgesetz für Pose-Fehler und
 Geschwindigkeitsbefehl (`pose.py`, `servo.py`) - der Schritt
-"Fehlerberechnung (Pose-Delta)" im obigen Schleifendiagramm - mit 15
-Tests und einem echten `correct`-CLI-Befehl.
+"Fehlerberechnung (Pose-Delta)" im obigen Schleifendiagramm - mit einem
+echten `correct`-CLI-Befehl; sowie die sicherheitsgesperrte
+Autorisierungs-Policy (`authorization.py`), die eine visuelle Erkennung
+nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
+`READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
+über den `request`-CLI-Befehl. Insgesamt 40 Tests.
 
 **Noch offen, blockiert durch echte Hardware:** die echte
 6-Freiheitsgrad-Posenschätzung aus Kamerabildern (benötigt die

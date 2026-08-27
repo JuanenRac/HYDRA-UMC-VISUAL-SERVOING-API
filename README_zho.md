@@ -27,6 +27,7 @@
 
 ### 关键特性：
 * ✅ **真实 v0 —— PBVS 修正律：** `pose.py` + `servo.py` 计算当前位姿与目标位姿之间的位姿增量（角度按最短路径环绕，不走容易导致万向节死锁的长路），并将其转化为比例速度指令，限幅时不改变其方向。通过下面的 `correct` 子命令暴露——运行或测试都不需要摄像头或 NPU。
+* 🛡️ **真实 v0 —— 安全联锁授权：** `authorization.py` 拒绝将感知转化为运动，除非上游安全状态为 `READY` 且视觉数据足够新鲜/可信。通过下面的新 `request` 子命令暴露——运行或测试都不需要摄像头、NPU 或 SAFETY-ZONES 进程。
 * 🔄 **闭环控制：** 持续反馈回路，绕过高层编排器以降低延迟。*（架构目标——向 HYDRA-UMC 核心的 gRPC 传输仍是未来工作。）*
 * 📐 **位姿估计：** 从单摄像头或多摄像头视角进行 6 自由度物体位姿估计。*（未来工作——需要本环境尚不具备的真实 Hailo-8 NPU。）*
 * ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。*（未来工作，原因相同。）*
@@ -54,6 +55,8 @@ flowchart LR
 * **为什么它是 HYDRA-UMC-VISION-NODE 的兄弟项目，而非子模块。** 位姿修正作为独立的进程/可部署单元运行，因此这里的崩溃或缓慢的推理周期不会拖累父项目自身的检测流水线，而 HYDRA-UMC-SAFETY-ZONES 依赖该流水线来确定 E-STOP 时机。
 * **为什么修正律先于位姿估计落地。** 将一对位姿转化为受限速度指令是纯粹的控制理论数学——编写和测试都不需要摄像头或 NPU，因此 v0 优先交付这一部分（`pose.py`、`servo.py`）。真正的 6 自由度位姿*估计*需要本环境尚不具备的 Hailo-8 硬件，将在后续落地。
 * **这如何融入生态系统的其余部分。** 位于感知（HYDRA-UMC-VISION-NODE）的下游、运动（HYDRA-UMC 固件）的上游——将检测到的偏移转化为机械臂自身点动/伺服回路所应用的运动学修正。
+* **为什么 `authorize_correction()` 在检查置信度/新鲜度之前先检查 `safety_state`。** 安全故障必须凌驾于一切之上，即便面对一个完全新鲜、可信的检测结果也是如此——因此 `INHIBITED`（safety_state != "READY"）被最先检查，并短路掉策略的其余部分。只有在确认机械臂可以安全移动之后，*数据*是否足够可信才会影响是否据此移动它（置信度过低或数据过期则返回 `REJECTED`）。这与 HYDRA-UMC-SAFETY-ZONES 中已经使用的 `INHIBITED` 优先于 `DANGER`/`WARNING` 的顺序一致。
+* **为什么 `request` 是新增子命令而不是修改 `correct`。** `correct` 是已有的底层纯数学工具（不感知安全状态，也没有摄像头新鲜度的概念），有自己的调用方和测试；就地为其套上安全联锁会悄悄改变它的契约。`request` 增加了这个带联锁、面向摄像头的入口点，生态系统代码实际上应当调用它，而 `correct` 保持不变，仍可用于直接的位姿数学运算。
 
 ---
 
@@ -67,17 +70,22 @@ CM5 + Hailo-8 是现成硬件，没有自己的板卡，因此本项目不携带
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # 源代码（hydra_umc_visual_servoing_api 包）
 │   └── hydra_umc_visual_servoing_api/
-│       ├── pose.py      # Pose6D —— 6 自由度位姿（x, y, z, roll, pitch, yaw）
-│       ├── servo.py     # PBVS 修正律：位姿误差 + 速度指令
-│       └── main.py      # CLI 入口点（裸调用 + `correct`）
-├── tests/               # 真实 pytest 套件（pose、servo、CLI）
+│       ├── pose.py           # Pose6D —— 6 自由度位姿（x, y, z, roll, pitch, yaw）
+│       ├── servo.py          # PBVS 修正律：位姿误差 + 速度指令
+│       ├── authorization.py  # 安全联锁策略（INHIBITED/REJECTED/ACCEPTED）
+│       └── main.py           # CLI 入口点（裸调用 + `correct` + `request`）
+├── tests/               # 真实 pytest 套件（pose、servo、authorization、CLI）
 ├── docs/                # 文档与运动学理论
 ├── build/               # 构建输出（本地 .venv 也存放于此）
 ├── images/              # 媒体与图表
 ├── scripts/             # 实用脚本
+├── tools/
+│   ├── build_test.py    # 不递增版本号的构建检查
+│   └── ci_validate.py   # CI 使用的清单/CHANGELOG/文档校验
 ├── pyproject.toml       # 包元数据、依赖项、里程表版本号
 ├── bump_version.py      # 里程表式版本递增（由 build.sh/.bat 运行）
 ├── build.sh / build.bat # venv + 可编辑安装 + 编译检查 + 测试
+├── build-test.sh / build-test.bat # 不递增版本号的构建检查
 └── run.sh / run.bat     # 从本地 venv 运行入口点
 ```
 
@@ -116,13 +124,33 @@ run.bat
 # converged    : False
 ```
 
+真实示例——请求一次带安全联锁的修正（接受、联锁阻止、拒绝三种情形）：
+
+```bash
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
+# outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
+# pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
+# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
+# outcome : INHIBITED - safety_state is 'FAULT', not 'READY'   （退出码 2）
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.2 --data-age-ms 30 --safety-state READY
+# outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   （退出码 1）
+```
+
 ---
 
 ## ✅ 当前状态与后续步骤
 
 **今天的真实进展：** PBVS 位姿误差与速度指令修正律（`pose.py`、
-`servo.py`）——上方回路图中的“误差计算（位姿增量）”步骤——附带 15 个
-测试和一个真实的 `correct` CLI 命令。
+`servo.py`）——上方回路图中的“误差计算（位姿增量）”步骤——附带一个
+真实的 `correct` CLI 命令；以及安全联锁授权策略（`authorization.py`），
+除非上游安全状态为 `READY` 且数据足够可信/新鲜，否则拒绝将视觉检测
+结果转化为运动，通过 `request` CLI 命令暴露。共计 40 个测试。
 
 **仍待完成，受限于真实硬件：** 从摄像头画面进行真实的 6 自由度位姿*估计*
 （需要 Hailo-8 NPU），以及将计算出的速度指令以低延迟通过 gRPC 传输至

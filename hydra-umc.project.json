@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "ecosystem": "HYDRA-UMC",
   "name": "HYDRA-UMC-VISUAL-SERVOING-API",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "role": "api",
   "stack": "python",
   "technologies": [
@@ -10,11 +10,11 @@
     "6-DOF pose estimation"
   ],
   "deployment_target": "cm5",
-  "maturity": "functional",
+  "maturity": "established",
   "family": "Vision AI Node",
   "parent": "HYDRA-UMC-VISION-NODE",
   "build": "",
-  "notes": "Functional v0: real Position-Based Visual Servoing (PBVS) correction law - pose-delta computation with shortest-turn angle wrapping, proportional velocity command with direction-preserving clamping, and convergence check, exposed via the 'correct' subcommand. 15 tests. Real 6-DOF pose *estimation* (needs the Hailo-8 NPU) and the low-latency gRPC feed to the HYDRA-UMC core remain future work.",
+  "notes": "Established v0: real Position-Based Visual Servoing (PBVS) correction law - pose-delta computation with shortest-turn angle wrapping, proportional velocity command with direction-preserving clamping, and convergence check, exposed via the 'correct' subcommand. Plus a safety-gated authorization layer (authorization.py) that refuses to turn a visual detection into motion unless the upstream safety_state is READY and the data is confident/fresh enough (INHIBITED wins over REJECTED, mirroring HYDRA-UMC-SAFETY-ZONES), exposed via the 'request' subcommand. 40 tests. Real 6-DOF pose *estimation* (needs the Hailo-8 NPU) and the low-latency gRPC feed to the HYDRA-UMC core remain future work.",
   "native_version": {
     "file": "pyproject.toml",
     "pattern": "^version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""

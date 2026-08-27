@@ -24,6 +24,7 @@ It supports both **Eye-in-Hand** (camera on tool) and **Eye-to-Hand** (fixed cam
 
 ### Key Features:
 * ✅ **Real v0 - PBVS correction law:** `pose.py` + `servo.py` compute the pose delta between a current and target 6-DOF pose (shortest-turn angle wrapping, no gimbal-lock-prone long way around) and turn it into a proportional velocity command, clamped without distorting its direction. Exposed via the `correct` subcommand below - no camera or NPU needed to run or test it.
+* 🛡️ **Real v0 - Safety-gated authorization:** `authorization.py` refuses to turn perception into motion unless the upstream safety state is `READY` and the visual data is fresh/confident enough. Exposed via the new `request` subcommand below - no camera, NPU, or SAFETY-ZONES process needed to run or test it.
 * 🔄 **Closed-Loop Control:** Continuous feedback loop bypassing the high-level orchestrator for low latency. *(architecture goal - the gRPC feed to the HYDRA-UMC core is still future work.)*
 * 📐 **Pose Estimation:** 6-DOF object pose estimation from single or multi-camera views. *(future work - needs the real Hailo-8 NPU this repo doesn't have access to yet.)*
 * ⚡ **Hardware Accelerated:** Uses Hailo-8 output for instant coordinate calculation. *(future work, same reason.)*
@@ -51,6 +52,8 @@ flowchart LR
 * **Why it's a sibling, not a submodule, of HYDRA-UMC-VISION-NODE.** Pose correction runs as its own process/deployable so a crash or slow inference cycle here can't stall the parent's own detection pipeline, which HYDRA-UMC-SAFETY-ZONES depends on for E-STOP timing.
 * **Why the correction law ships before pose estimation.** Turning a pose *pair* into a bounded velocity command is pure control-theory math - it needs no camera or NPU to write or test, so v0 lands that piece (`pose.py`, `servo.py`) first. Real 6-DOF pose *estimation* needs the Hailo-8 hardware this environment doesn't have, and lands later.
 * **How this fits the rest of the ecosystem.** Sits downstream of perception (HYDRA-UMC-VISION-NODE) and upstream of motion (HYDRA-UMC firmware) - turns detected offsets into the kinematic corrections the robot arm's own jog/servo loop applies.
+* **Why `authorize_correction()` checks `safety_state` before confidence/freshness.** A safety fault must win over everything else, even a perfectly fresh and confident detection - so `INHIBITED` (safety_state != "READY") is checked first and short-circuits the rest of the policy. Only once the arm is confirmed safe to move does it matter whether the *data* is trustworthy enough to move it on (`REJECTED` for low confidence or stale data). This mirrors the `INHIBITED`-before-`DANGER`/`WARNING` precedence already used in HYDRA-UMC-SAFETY-ZONES.
+* **Why `request` is a new subcommand instead of changing `correct`.** `correct` is the existing low-level pure-math utility (no safety awareness, no camera-freshness concept) with its own callers and tests; wrapping it in a safety gate in place would silently change its contract. `request` adds the gated, camera-facing entry point ecosystem code should actually call, while `correct` stays available unchanged for direct pose-math use.
 
 ---
 
@@ -64,17 +67,22 @@ live only in the integration parent, `HYDRA-UMC-VISION-NODE`.
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Source code (hydra_umc_visual_servoing_api package)
 │   └── hydra_umc_visual_servoing_api/
-│       ├── pose.py      # Pose6D - 6-DOF pose (x, y, z, roll, pitch, yaw)
-│       ├── servo.py     # PBVS pose-error + velocity-command correction law
-│       └── main.py      # CLI entry point (bare invocation + `correct`)
-├── tests/               # Real pytest suite (pose, servo, CLI)
+│       ├── pose.py           # Pose6D - 6-DOF pose (x, y, z, roll, pitch, yaw)
+│       ├── servo.py          # PBVS pose-error + velocity-command correction law
+│       ├── authorization.py  # Safety-gated request policy (INHIBITED/REJECTED/ACCEPTED)
+│       └── main.py           # CLI entry point (bare invocation + `correct` + `request`)
+├── tests/               # Real pytest suite (pose, servo, authorization, CLI)
 ├── docs/                # Documentation and kinematic theory
 ├── build/               # Build output (local .venv lives here too)
 ├── images/              # Media and diagrams
 ├── scripts/             # Utility scripts
+├── tools/
+│   ├── build_test.py    # Non-versioning build/compile check (no version/CHANGELOG bump)
+│   └── ci_validate.py   # Manifest/CHANGELOG/docs validation used by CI
 ├── pyproject.toml       # Package metadata, dependencies, odometer version
 ├── bump_version.py      # Odometer-style version bump (run by build.sh/.bat)
 ├── build.sh / build.bat # venv + editable install + compile-check + tests
+├── build-test.sh / build-test.bat # Non-versioning build check (no CHANGELOG/version bump)
 └── run.sh / run.bat     # Runs the entry point from the local venv
 ```
 
@@ -114,13 +122,35 @@ Real example - compute the correction from a current pose to a target one:
 # converged    : False
 ```
 
+Real example - request a safety-gated correction (accepted, inhibited, and rejected):
+
+```bash
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
+# outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
+# pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
+# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
+# outcome : INHIBITED - safety_state is 'FAULT', not 'READY'   (exit code 2)
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.2 --data-age-ms 30 --safety-state READY
+# outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   (exit code 1)
+```
+
 ---
 
 ## ✅ Current Status & Next Steps
 
 **Real today:** the PBVS pose-error and velocity-command correction law
 (`pose.py`, `servo.py`) - the "Error Calculation (Pose Delta)" step in
-the loop diagram above - with 15 tests and a real `correct` CLI command.
+the loop diagram above - with a real `correct` CLI command; and the
+safety-gated authorization policy (`authorization.py`) that refuses to
+turn a visual detection into motion unless the upstream safety state is
+`READY` and the data is confident/fresh enough, exposed via the `request`
+CLI command. 40 tests total.
 
 **Still ahead, and blocked on real hardware:** 6-DOF pose *estimation*
 from camera frames (needs the Hailo-8 NPU), and the low-latency gRPC

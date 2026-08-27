@@ -28,6 +28,7 @@
 
 ### 主な機能：
 * ✅ **実装済み v0 —— PBVS 補正則：** `pose.py` + `servo.py` が現在の姿勢と目標姿勢の姿勢差分を計算し（角度はジンバルロックを招きやすい遠回りではなく、最短経路でラップされます）、それを比例速度指令に変換します。クランプ処理は方向を歪めません。下記の `correct` サブコマンドから利用可能で、実行にもテストにもカメラや NPU は不要です。
+* 🛡️ **実装済み v0 —— セーフティゲート付き認可：** `authorization.py` は、上流の安全状態が `READY` であり、かつ視覚データが十分に新しく信頼できる場合を除き、知覚を運動に変換することを拒否します。下記の新しい `request` サブコマンドから利用可能で、実行にもテストにもカメラ、NPU、SAFETY-ZONES プロセスは不要です。
 * 🔄 **閉ループ制御：** 上位のオーケストレーターを経由しない連続フィードバックループにより低遅延を実現。*（アーキテクチャ上の目標——HYDRA-UMC コアへの gRPC 送信はまだ将来の作業です。）*
 * 📐 **姿勢推定：** 単一または複数カメラビューからの 6 自由度物体姿勢推定。*（将来の作業——この環境にはまだない実際の Hailo-8 NPU が必要です。）*
 * ⚡ **ハードウェアアクセラレーション：** Hailo-8 の出力を使用した即時座標計算。*（同じ理由で将来の作業です。）*
@@ -55,6 +56,8 @@ flowchart LR
 * **HYDRA-UMC-VISION-NODE のサブモジュールではなく兄弟プロジェクトである理由。** 姿勢補正は独自のプロセス/デプロイ単位として実行されるため、ここでのクラッシュや遅い推論サイクルが、HYDRA-UMC-SAFETY-ZONES が E-STOP のタイミング判断のために依存している親プロジェクト自身の検知パイプラインを停滞させることはありません。
 * **補正則が姿勢推定より先に実装される理由。** 姿勢の「ペア」を制限付き速度指令に変換するのは純粋な制御理論の数学であり、記述にもテストにもカメラや NPU は不要です。そのため v0 ではこの部分（`pose.py`、`servo.py`）が先に実装されます。実際の 6 自由度姿勢*推定*にはこの環境にない Hailo-8 ハードウェアが必要で、後で実装されます。
 * **エコシステムの他の部分との関係。** 知覚（HYDRA-UMC-VISION-NODE）の下流、運動（HYDRA-UMC ファームウェア）の上流に位置します——検知されたオフセットを、ロボットアーム自身のジョグ/サーボループが適用する運動学的補正へと変換します。
+* **`authorize_correction()` が信頼度・鮮度より先に `safety_state` を確認する理由。** 安全上の障害は、完全に新しく信頼できる検知結果よりも常に優先されなければなりません——そのため `INHIBITED`（safety_state != "READY"）が最初に確認され、残りのポリシーを短絡させます。アームが安全に動作できることが確認されて初めて、*データ*がそれを動かすのに十分信頼できるかどうかが問題になります（信頼度が低い、またはデータが古い場合は `REJECTED`）。これは HYDRA-UMC-SAFETY-ZONES ですでに使われている `INHIBITED` を `DANGER`/`WARNING` より優先する順序と一致します。
+* **`correct` を変更する代わりに `request` を新しいサブコマンドとした理由。** `correct` は既存の低レベルな純粋数学ユーティリティ（安全状態の認識もカメラの鮮度という概念も持たない）であり、独自の呼び出し元とテストを持ちます。これをその場でセーフティゲートで包むと、その契約が暗黙のうちに変わってしまいます。`request` は、エコシステムのコードが実際に呼び出すべき、ゲート付きでカメラを意識した新しいエントリポイントを追加するものであり、`correct` は姿勢数学を直接利用する用途のために変更なく利用可能なままです。
 
 ---
 
@@ -69,17 +72,22 @@ CM5 + Hailo-8 は市販のハードウェアであり独自の基板を持たな
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # ソースコード（hydra_umc_visual_servoing_api パッケージ）
 │   └── hydra_umc_visual_servoing_api/
-│       ├── pose.py      # Pose6D —— 6 自由度姿勢（x, y, z, roll, pitch, yaw）
-│       ├── servo.py     # PBVS 補正則：姿勢誤差 + 速度指令
-│       └── main.py      # CLI エントリポイント（素の呼び出し + `correct`）
-├── tests/               # 実際の pytest スイート（pose、servo、CLI）
+│       ├── pose.py           # Pose6D —— 6 自由度姿勢（x, y, z, roll, pitch, yaw）
+│       ├── servo.py          # PBVS 補正則：姿勢誤差 + 速度指令
+│       ├── authorization.py  # セーフティゲート付きポリシー（INHIBITED/REJECTED/ACCEPTED）
+│       └── main.py           # CLI エントリポイント（素の呼び出し + `correct` + `request`）
+├── tests/               # 実際の pytest スイート（pose、servo、authorization、CLI）
 ├── docs/                # ドキュメントと運動学理論
 ├── build/               # ビルド出力（ローカルの .venv もここに存在）
 ├── images/              # メディアと図表
 ├── scripts/             # ユーティリティスクリプト
+├── tools/
+│   ├── build_test.py    # バージョンを増やさないビルドチェック
+│   └── ci_validate.py   # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
 ├── pyproject.toml       # パッケージメタデータ、依存関係、オドメーターバージョン
 ├── bump_version.py      # オドメーター式バージョンインクリメント（build.sh/.bat が実行）
 ├── build.sh / build.bat # venv + editable インストール + コンパイルチェック + テスト
+├── build-test.sh / build-test.bat # バージョンを増やさないビルドチェック
 └── run.sh / run.bat     # ローカル venv からエントリポイントを実行
 ```
 
@@ -120,13 +128,34 @@ run.bat
 # converged    : False
 ```
 
+実際の例 —— セーフティゲート付き補正をリクエストする（許可・阻止・拒否の 3 パターン）：
+
+```bash
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
+# outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
+# pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
+# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
+# outcome : INHIBITED - safety_state is 'FAULT', not 'READY'   （終了コード 2）
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.2 --data-age-ms 30 --safety-state READY
+# outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   （終了コード 1）
+```
+
 ---
 
 ## ✅ 現在の状況と次のステップ
 
 **現在実装済み：** PBVS 姿勢誤差・速度指令補正則（`pose.py`、
-`servo.py`）——上のループ図の「誤差計算（姿勢差分）」ステップ——15 個の
-テストと実際の `correct` CLI コマンド付き。
+`servo.py`）——上のループ図の「誤差計算（姿勢差分）」ステップ——実際の
+`correct` CLI コマンド付き。加えて、上流の安全状態が `READY` であり
+データが十分に信頼できる/新しい場合を除き、視覚検知結果を運動に変換
+することを拒否するセーフティゲート付き認可ポリシー（`authorization.py`）を
+`request` CLI コマンドとして実装済み。テストは合計 40 個。
 
 **まだ先で、実際のハードウェアに阻まれている：** カメラ映像からの実際の
 6 自由度姿勢*推定*（Hailo-8 NPU が必要）、および結果として得られる

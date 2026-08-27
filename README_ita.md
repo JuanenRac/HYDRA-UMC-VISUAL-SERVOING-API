@@ -24,6 +24,7 @@ Supporta configurazioni **Eye-in-Hand** (telecamera sullo strumento) ed **Eye-to
 
 ### Caratteristiche principali:
 * ✅ **Reale v0 - legge di correzione PBVS:** `pose.py` + `servo.py` calcolano il delta di posa tra una posa attuale e una obiettivo (con avvolgimento angolare per il giro più breve, senza il lungo giro che favorisce il blocco cardanico) e lo trasformano in un comando di velocità proporzionale, limitato senza distorcerne la direzione. Esposto tramite il sottocomando `correct` più sotto - non serve telecamera né NPU per eseguirlo o testarlo.
+* 🛡️ **Reale v0 - autorizzazione con blocco di sicurezza:** `authorization.py` si rifiuta di trasformare la percezione in movimento a meno che lo stato di sicurezza a monte non sia `READY` e i dati visivi non siano abbastanza freschi/affidabili. Esposto tramite il nuovo sottocomando `request` più sotto - non servono telecamera, NPU o il processo SAFETY-ZONES per eseguirlo o testarlo.
 * 🔄 **Controllo a circuito chiuso:** Feedback continuo che bypassa l'orchestratore di alto livello per una bassa latenza. *(obiettivo architetturale - l'invio gRPC al core HYDRA-UMC resta lavoro futuro.)*
 * 📐 **Stima della posa:** Stima della posa dell'oggetto 6-DOF da viste a telecamera singola o multipla. *(lavoro futuro - richiede la vera NPU Hailo-8 che questo ambiente non ha ancora.)*
 * ⚡ **Accelerazione hardware:** Utilizza l'output di Hailo-8 per il calcolo istantaneo delle coordinate. *(lavoro futuro, stesso motivo.)*
@@ -51,6 +52,8 @@ flowchart LR
 * **Perché è sorella, non un sottomodulo, di HYDRA-UMC-VISION-NODE.** La correzione di posa gira come proprio processo/deployment così che un crash o un ciclo di inferenza lento qui non possa bloccare la pipeline di rilevamento del genitore, da cui dipende HYDRA-UMC-SAFETY-ZONES per il timing dell'E-STOP.
 * **Perché la legge di correzione arriva prima della stima della posa.** Trasformare una coppia di pose in un comando di velocità limitato è pura matematica di teoria del controllo - non serve telecamera né NPU per scriverla o testarla, quindi v0 consegna prima questo pezzo (`pose.py`, `servo.py`). La vera stima di posa a 6 gradi di libertà richiede l'hardware Hailo-8 che questo ambiente non ha, e arriverà più avanti.
 * **Come si inserisce nel resto dell'ecosistema.** Si colloca a valle della percezione (HYDRA-UMC-VISION-NODE) e a monte del movimento (firmware HYDRA-UMC) - trasforma gli scostamenti rilevati nelle correzioni cinematiche che il ciclo jog/servo del braccio robotico applica.
+* **Perché `authorize_correction()` controlla `safety_state` prima di confidenza/freschezza.** Un guasto di sicurezza deve prevalere su tutto il resto, anche di fronte a una rilevazione perfettamente fresca e affidabile - quindi `INHIBITED` (safety_state != "READY") viene controllato per primo e interrompe il resto della policy. Solo una volta confermato che il braccio può muoversi in sicurezza conta se i *dati* sono abbastanza affidabili da muoverlo (`REJECTED` per confidenza bassa o dati obsoleti). Questo rispecchia la stessa precedenza `INHIBITED`-prima-di-`DANGER`/`WARNING` già usata in HYDRA-UMC-SAFETY-ZONES.
+* **Perché `request` è un nuovo sottocomando invece di modificare `correct`.** `correct` è l'utility di basso livello esistente, matematica pura (senza consapevolezza di sicurezza né concetto di freschezza della telecamera) con i propri chiamanti e test; avvolgerla sul posto in un blocco di sicurezza ne cambierebbe silenziosamente il contratto. `request` aggiunge il punto di ingresso con blocco, orientato alla telecamera, che il codice dell'ecosistema dovrebbe effettivamente chiamare, mentre `correct` resta disponibile invariato per l'uso diretto della matematica di posa.
 
 ---
 
@@ -64,17 +67,22 @@ vivono solo nel padre di integrazione, `HYDRA-UMC-VISION-NODE`.
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Codice sorgente (pacchetto hydra_umc_visual_servoing_api)
 │   └── hydra_umc_visual_servoing_api/
-│       ├── pose.py      # Pose6D - posa a 6-DOF (x, y, z, roll, pitch, yaw)
-│       ├── servo.py     # Legge di correzione PBVS: errore di posa + comando di velocità
-│       └── main.py      # Entry point CLI (invocazione nuda + `correct`)
-├── tests/               # Suite pytest reale (pose, servo, CLI)
+│       ├── pose.py           # Pose6D - posa a 6-DOF (x, y, z, roll, pitch, yaw)
+│       ├── servo.py          # Legge di correzione PBVS: errore di posa + comando di velocità
+│       ├── authorization.py  # Policy con blocco di sicurezza (INHIBITED/REJECTED/ACCEPTED)
+│       └── main.py           # Entry point CLI (invocazione nuda + `correct` + `request`)
+├── tests/               # Suite pytest reale (pose, servo, authorization, CLI)
 ├── docs/                # Documentazione e teoria cinematica
 ├── build/               # Output di build (qui vive anche il .venv locale)
 ├── images/              # Media e diagrammi
 ├── scripts/             # Script di utilità
+├── tools/
+│   ├── build_test.py    # Controllo build senza versionamento
+│   └── ci_validate.py   # Validazione manifest/CHANGELOG/docs usata dalla CI
 ├── pyproject.toml       # Metadati del pacchetto, dipendenze, versione a contachilometri
 ├── bump_version.py      # Incremento versione a contachilometri (build.sh/.bat)
 ├── build.sh / build.bat # venv + installazione editabile + compile-check + test
+├── build-test.sh / build-test.bat # Controllo build senza versionamento
 └── run.sh / run.bat     # Esegue l'entry point dal venv locale
 ```
 
@@ -114,14 +122,36 @@ Esempio reale - calcolare la correzione da una posa attuale a una obiettivo:
 # converged    : False
 ```
 
+Esempio reale - richiedere una correzione con blocco di sicurezza (accettata, inibita e rifiutata):
+
+```bash
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
+# outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
+# pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
+# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
+# outcome : INHIBITED - safety_state is 'FAULT', not 'READY'   (codice di uscita 2)
+
+./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
+  --frame-id cam0-f42 --confidence 0.2 --data-age-ms 30 --safety-state READY
+# outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   (codice di uscita 1)
+```
+
 ---
 
 ## ✅ Stato Attuale e Prossimi Passi
 
 **Reale oggi:** la legge di correzione PBVS di errore di posa e comando
 di velocità (`pose.py`, `servo.py`) - il passaggio "Calcolo dell'errore
-(Pose Delta)" del diagramma del loop qui sopra - con 15 test e un
-comando CLI `correct` reale.
+(Pose Delta)" del diagramma del loop qui sopra - con un comando CLI
+`correct` reale; e la policy di autorizzazione con blocco di sicurezza
+(`authorization.py`) che si rifiuta di trasformare una rilevazione
+visiva in movimento a meno che lo stato di sicurezza a monte non sia
+`READY` e i dati non siano abbastanza affidabili/freschi, esposta
+tramite il comando CLI `request`. 40 test in totale.
 
 **Ancora da fare, bloccato da hardware reale:** la vera stima di posa a
 6 gradi di libertà da fotogrammi della telecamera (richiede la NPU
