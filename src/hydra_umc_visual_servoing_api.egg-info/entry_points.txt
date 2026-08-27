@@ -1,0 +1,2 @@
+[console_scripts]
+hydra-umc-visual-servoing-api = hydra_umc_visual_servoing_api.main:main

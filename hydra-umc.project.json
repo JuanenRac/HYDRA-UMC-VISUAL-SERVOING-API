@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "ecosystem": "HYDRA-UMC",
+  "name": "HYDRA-UMC-VISUAL-SERVOING-API",
+  "version": "0.0.1",
+  "role": "api",
+  "stack": "python",
+  "technologies": [
+    "Python",
+    "6-DOF pose estimation"
+  ],
+  "deployment_target": "cm5",
+  "maturity": "scaffolding",
+  "family": "Vision AI Node",
+  "parent": "HYDRA-UMC-VISION-NODE",
+  "build": "",
+  "notes": "Scaffolding stage: real entry point only ('no servoing logic yet' per its own CHANGELOG) - Eye-in-Hand/Eye-to-Hand pose correction is future work.",
+  "native_version": {
+    "file": "pyproject.toml",
+    "pattern": "^version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
+  }
+}

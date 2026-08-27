@@ -1,0 +1,90 @@
+Metadata-Version: 2.4
+Name: hydra-umc-visual-servoing-api
+Version: 1.0.1
+Summary: Closed-loop kinematic correction service that turns Hailo-8 visual feedback into real-time pose corrections for the HYDRA-UMC core, supporting Eye-in-Hand and Eye-to-Hand configurations.
+Author-email: JuanenRac <electrohobby3d@gmail.com>
+License: GPL-3.0-only
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Dynamic: license-file
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/JuanenRac/JuanenRac/main/HYDRA_BANNER.svg" alt="HYDRA-UMC Banner" width="100%">
+</p>
+
+# 🎯 HYDRA-UMC-VISUAL-SERVOING-API
+
+<p align="center">🇺🇸 <b>English</b> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a></p>
+
+### 📐 Close-Loop Kinematic Correction via Image Feedback
+
+<p align="left">
+  <img src="https://img.shields.io/badge/Licencia-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
+  <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
+</p>
+
+---
+
+## 1. 🛠️ TECHNICAL OVERVIEW
+
+**HYDRA-UMC-VISUAL-SERVOING-API** is the precision bridge between perception and motion. It calculates the error delta between a desired pose and the actual visual pose of an object, providing real-time kinematic corrections to the HYDRA-UMC core.
+
+It supports both **Eye-in-Hand** (camera on tool) and **Eye-to-Hand** (fixed camera) configurations, enabling ultra-precise Pick-and-Place, SMD alignment, and dynamic trajectory adjustment.
+
+### Key Features:
+* 🎯 **Sub-micrometric Correction:** Dynamic adjustment based on real-time visual fiducials.
+* 🔄 **Closed-Loop Control:** Continuous feedback loop bypassing the high-level orchestrator for low latency.
+* 📐 **Pose Estimation:** 6-DOF object pose estimation from single or multi-camera views.
+* ⚡ **Hardware Accelerated:** Uses Hailo-8 output for instant coordinate calculation.
+
+---
+
+## 2. 🔄 VISUAL SERVOING LOOP
+
+```mermaid
+flowchart LR
+    TARGET["Target Object"] --> CAM["Camera Capture"]
+    CAM --> NPU["Hailo-8 Pose Detection"]
+    NPU --> API["VISUAL-SERVOING-API"]
+    API --> ERROR["Error Calculation (Pose Delta)"]
+    ERROR --> CORE["HYDRA-UMC Core (STM32)"]
+    CORE --> MOVE["Motor Actuation"]
+    MOVE --> TARGET
+```
+
+---
+
+## 📂 DIRECTORY STRUCTURE
+
+```text
+HYDRA-UMC-VISUAL-SERVOING-API/
+├── src/         # Source code (Math, Client, Hardware)
+├── docs/        # Documentation and kinematic theory
+├── hardware/    # Hardware design files
+├── firmware/    # Embedded firmware
+├── os/          # Operating system configurations
+├── build/       # Compiled binaries
+├── images/      # Media and diagrams
+├── scripts/     # Utility scripts
+└── models/      # Compiled .hef models
+```
+
+---
+
+## 🚀 ROADMAP 2026
+
+* **Q1 2026:** Multi-camera pipeline synchronization and calibration for 8x USB 3.0 feeds.
+* **Q2 2026:** Migration to YOLOv11 and Hailo-8L optimization for industrial component detection.
+* **Q3 2026:** Real-time 3D reconstruction from stereo vision nodes and safety zone dynamic mapping.
+* **Q4 2026:** Support for 9-DOF visual tracking (including orientation redundancy) and sub-micrometric correction.
+
+---
+
+## 👤 AUTHOR
+**JuanenRac** (Electro Hobby 3D)
+📧 electrohobby3d@gmail.com
+
+## 📜 LICENSE
+GPL-3.0 - See LICENSE for details.
