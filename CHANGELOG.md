@@ -16,6 +16,14 @@ rule rather than semantic-versioning judgment calls:
 - when `PATCH` would exceed 9, it resets to 0 and `MINOR` +1 instead (e.g. `0.0.9` -> `0.1.0`, never `0.0.10`)
 - the same carry cascades into `MAJOR` if `MINOR` would exceed 9
 
+## Unreleased - finite, directional servo safety bounds
+
+- **`pose.py` / `servo.py`** - parsed poses reject `NaN` and infinity; gain,
+  speed limits and convergence tolerances now require finite positive values.
+  A negative speed limit can no longer invert a correction vector and a
+  non-finite gain cannot create an unsafe velocity command.
+- Added regression tests for non-finite poses, gains and bounds.
+
 ---
 
 ## [0.0.3] - Real v0: safety-gated authorization for visual corrections

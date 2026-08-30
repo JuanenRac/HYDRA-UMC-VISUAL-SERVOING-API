@@ -21,6 +21,12 @@ from dataclasses import dataclass
 from .pose import Pose6D
 
 
+def _require_positive_finite(value: float, label: str) -> None:
+    """Reject a bound that could create a reversed or non-finite command."""
+    if not math.isfinite(value) or value <= 0.0:
+        raise ValueError(f"{label} must be a finite positive value, got {value}")
+
+
 def _wrap_angle_diff(a: float, b: float) -> float:
     """Shortest signed angular distance a - b, wrapped to (-pi, pi]."""
     return math.atan2(math.sin(a - b), math.cos(a - b))
@@ -70,6 +76,7 @@ def _clamp_vector(components: tuple[float, ...], max_norm: float | None) -> tupl
     """Scale components down (preserving direction) so their norm <= max_norm."""
     if max_norm is None:
         return components
+    _require_positive_finite(max_norm, "maximum speed")
     norm = math.sqrt(sum(c**2 for c in components))
     if norm <= max_norm or norm == 0.0:
         return components
@@ -90,8 +97,7 @@ def compute_velocity_command(
     tool head still moves in a straight line towards the target instead
     of skewing off-axis when one component saturates first.
     """
-    if gain <= 0:
-        raise ValueError(f"gain must be positive, got {gain}")
+    _require_positive_finite(gain, "gain")
     linear = _clamp_vector(
         (gain * error.dx, gain * error.dy, gain * error.dz), max_linear_speed
     )
@@ -106,4 +112,6 @@ def compute_velocity_command(
 
 def is_converged(error: PoseError, linear_tol: float, angular_tol: float) -> bool:
     """Whether the pose error is small enough to stop the closed loop."""
+    _require_positive_finite(linear_tol, "linear tolerance")
+    _require_positive_finite(angular_tol, "angular tolerance")
     return error.linear_norm <= linear_tol and error.angular_norm <= angular_tol

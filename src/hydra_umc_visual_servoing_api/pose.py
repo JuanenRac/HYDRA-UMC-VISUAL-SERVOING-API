@@ -13,6 +13,7 @@ to compose or interpolate rotations.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 
 
 class PoseParseError(ValueError):
@@ -40,4 +41,6 @@ class Pose6D:
             values = [float(p) for p in parts]
         except ValueError as exc:
             raise PoseParseError(f"non-numeric value in pose {text!r}: {exc}") from exc
+        if not all(math.isfinite(value) for value in values):
+            raise PoseParseError(f"pose values must be finite: {text!r}")
         return cls(*values)

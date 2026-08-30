@@ -18,6 +18,12 @@ def test_parse_non_numeric():
         Pose6D.parse("1.0,2.0,3.0,x,0.2,0.3")
 
 
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+def test_parse_non_finite_value(value):
+    with pytest.raises(PoseParseError):
+        Pose6D.parse(f"1.0,2.0,3.0,{value},0.2,0.3")
+
+
 def test_pose_is_immutable():
     p = Pose6D.parse("0,0,0,0,0,0")
     with pytest.raises(Exception):

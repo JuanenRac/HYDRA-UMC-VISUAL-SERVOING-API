@@ -4,6 +4,7 @@ import pytest
 
 from hydra_umc_visual_servoing_api.pose import Pose6D
 from hydra_umc_visual_servoing_api.servo import (
+    PoseError,
     compute_pose_error,
     compute_velocity_command,
     is_converged,
@@ -69,3 +70,17 @@ def test_is_converged():
 
     big_error = compute_pose_error(Pose6D(0, 0, 0, 0, 0, 0), Pose6D(1.0, 0, 0, 0, 0, 0))
     assert not is_converged(big_error, linear_tol=0.001, angular_tol=0.01)
+
+
+@pytest.mark.parametrize("gain", [0.0, -1.0, float("nan"), float("inf")])
+def test_velocity_rejects_invalid_gain(gain):
+    with pytest.raises(ValueError):
+        compute_velocity_command(PoseError(1, 0, 0, 0, 0, 0), gain)
+
+
+@pytest.mark.parametrize("maximum", [0.0, -0.1, float("nan")])
+def test_velocity_rejects_invalid_speed_limit(maximum):
+    with pytest.raises(ValueError):
+        compute_velocity_command(
+            PoseError(1, 0, 0, 0, 0, 0), gain=1.0, max_linear_speed=maximum
+        )
