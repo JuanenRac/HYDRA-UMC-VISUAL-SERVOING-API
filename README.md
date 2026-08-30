@@ -28,6 +28,7 @@ It supports both **Eye-in-Hand** (camera on tool) and **Eye-to-Hand** (fixed cam
 * 🔄 **Closed-Loop Control:** Continuous feedback loop bypassing the high-level orchestrator for low latency. *(architecture goal - the gRPC feed to the HYDRA-UMC core is still future work.)*
 * 📐 **Pose Estimation:** 6-DOF object pose estimation from single or multi-camera views. *(future work - needs the real Hailo-8 NPU this repo doesn't have access to yet.)*
 * ⚡ **Hardware Accelerated:** Uses Hailo-8 output for instant coordinate calculation. *(future work, same reason.)*
+* 🔌 **HailoRT integration boundary, prepared ahead of the module:** `hailo_runtime.py` is written against the real, confirmed `hailo_platform` API (`VDevice`, `HEF`, `ConfigureParams`) - lazily imported so this repo installs/tests cleanly with no `hailort` package or Hailo-8 module present - and `hailo_output_to_pose()` adapts a real inference result straight into the `Pose6D` `compute_pose_error()` already consumes. *(implemented, integration boundary only - actually running inference still needs a real compiled pose-estimation `.hef` and a physical Hailo-8 module.)*
 
 ---
 
@@ -146,15 +147,19 @@ Real example - request a safety-gated correction (accepted, inhibited, and rejec
 
 **Real today:** the PBVS pose-error and velocity-command correction law
 (`pose.py`, `servo.py`) - the "Error Calculation (Pose Delta)" step in
-the loop diagram above - with a real `correct` CLI command; and the
+the loop diagram above - with a real `correct` CLI command; the
 safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
-CLI command. 50 tests total.
+CLI command; and a real HailoRT integration boundary (`hailo_runtime.py`)
+ready for a real Hailo-8 pose estimator the moment it plugs in. 57 tests
+total.
 
-**Still ahead, and blocked on real hardware:** 6-DOF pose *estimation*
-from camera frames (needs the Hailo-8 NPU), and the low-latency gRPC
-feed of the resulting velocity command to the HYDRA-UMC core.
+**Still ahead, and blocked on real hardware:** actually running 6-DOF
+pose *estimation* through `hailo_runtime.py` needs a real compiled
+pose-estimation `.hef` (no specific model chosen yet) and a physical
+Hailo-8 NPU attached, and the low-latency gRPC feed of the resulting
+velocity command to the HYDRA-UMC core is separate future work.
 
 ## 🚀 ROADMAP
 * **Phase 1:** Multi-camera pipeline synchronization and calibration for 8x USB 3.0 feeds.

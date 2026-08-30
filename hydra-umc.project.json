@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "ecosystem": "HYDRA-UMC",
   "name": "HYDRA-UMC-VISUAL-SERVOING-API",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "role": "api",
   "stack": "python",
   "technologies": [
@@ -14,7 +14,7 @@
   "family": "Vision AI Node",
   "parent": "HYDRA-UMC-VISION-NODE",
   "build": "python tools/build_test.py",
-  "notes": "Established v0: real Position-Based Visual Servoing (PBVS) correction law - pose-delta computation with shortest-turn angle wrapping, proportional velocity command with direction-preserving clamping, and convergence check, exposed via the 'correct' subcommand. Plus a safety-gated authorization layer (authorization.py) that refuses to turn a visual detection into motion unless the upstream safety_state is READY and the data is confident/fresh enough (INHIBITED wins over REJECTED, mirroring HYDRA-UMC-SAFETY-ZONES), exposed via the 'request' subcommand. 50 tests. Real 6-DOF pose *estimation* (needs the Hailo-8 NPU) and the low-latency gRPC feed to the HYDRA-UMC core remain future work.",
+  "notes": "Established v0: real Position-Based Visual Servoing (PBVS) correction law - pose-delta computation with shortest-turn angle wrapping, proportional velocity command with direction-preserving clamping, and convergence check, exposed via the 'correct' subcommand. Plus a safety-gated authorization layer (authorization.py) that refuses to turn a visual detection into motion unless the upstream safety_state is READY and the data is confident/fresh enough (INHIBITED wins over REJECTED, mirroring HYDRA-UMC-SAFETY-ZONES), exposed via the 'request' subcommand. Added hailo_runtime.py: a real HailoRT (hailo_platform) integration boundary - open_vdevice()/load_hailo_pose_model() against the real confirmed API, lazily imported so this dev machine (no hailort installed) degrades to a clear RuntimeError; hailo_output_to_pose() adapts a real InferVStreams result into this project's own Pose6D and is fully unit-tested without hailort. 57 tests. Real 6-DOF pose *estimation* (needs the Hailo-8 NPU and a real compiled .hef) and the low-latency gRPC feed to the HYDRA-UMC core remain future work.",
   "native_version": {
     "file": "pyproject.toml",
     "pattern": "^version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""

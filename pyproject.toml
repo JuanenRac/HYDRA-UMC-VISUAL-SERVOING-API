@@ -1,6 +1,6 @@
 [project]
 name = "hydra-umc-visual-servoing-api"
-version = "0.0.3"
+version = "0.0.4"
 description = "Closed-loop kinematic correction service that turns Hailo-8 visual feedback into real-time pose corrections for the HYDRA-UMC core, supporting Eye-in-Hand and Eye-to-Hand configurations."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,8 +13,12 @@ authors = [{ name = "JuanenRac", email = "electrohobby3d@gmail.com" }]
 # rather than just differencing poses the Hailo-8 already estimated.
 dependencies = []
 
+# hailo_runtime.py's own hailort import is lazy (see that module's own
+# header) so this extra is only needed to actually run inference against
+# a real Hailo-8 module - never to import or test this package.
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+hailo = ["hailort"]
 
 [project.scripts]
 hydra-umc-visual-servoing-api = "hydra_umc_visual_servoing_api.main:main"

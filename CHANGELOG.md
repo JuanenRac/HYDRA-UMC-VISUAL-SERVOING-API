@@ -26,6 +26,29 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.0.4] - Real HailoRT integration boundary, prepared ahead of the Hailo-8 module
+
+- **Added `src/hydra_umc_visual_servoing_api/hailo_runtime.py`** (new) -
+  a real HailoRT (`hailo_platform`) integration boundary, so this API is
+  ready to actually consume a real Hailo-8 pose estimate the moment a
+  real module is attached, rather than starting that work from zero
+  then. `open_vdevice()` and `load_hailo_pose_model()` are written
+  against the real, confirmed HailoRT Python API (`VDevice`, `HEF`,
+  `ConfigureParams.create_from_hef(..., interface=HailoStreamInterface.PCIe)`),
+  lazily imported (same pattern as this ecosystem's other real hardware
+  transports) so this development machine, which has no `hailort`
+  installed, degrades to a clear `HailoNotAvailableError` instead of a
+  bare `ImportError`. `hailo_output_to_pose()` adapts a real
+  `InferVStreams` inference result into this project's own `Pose6D` -
+  the exact shape `servo.py`'s `compute_pose_error()` already consumes -
+  and needs no real hailort to exercise, fully unit-tested against
+  plain-list fakes standing in for a real numpy-backed result. `hailort`
+  added as a new `[project.optional-dependencies]` extra (`pip install
+  .[hailo]`); never required. 7 new tests (57 total). Actually running
+  inference still needs a real compiled pose-estimation `.hef` and a
+  physical Hailo-8 module, both future work - but consuming one, once it
+  exists, is no longer unwritten code.
+
 ## [0.0.3] - Real v0: safety-gated authorization for visual corrections
 
 - **`src/hydra_umc_visual_servoing_api/authorization.py`** (new) - a
