@@ -13,7 +13,7 @@
   "maturity": "established",
   "family": "Vision AI Node",
   "parent": "HYDRA-UMC-VISION-NODE",
-  "build": "",
+  "build": "python tools/build_test.py",
   "notes": "Established v0: real Position-Based Visual Servoing (PBVS) correction law - pose-delta computation with shortest-turn angle wrapping, proportional velocity command with direction-preserving clamping, and convergence check, exposed via the 'correct' subcommand. Plus a safety-gated authorization layer (authorization.py) that refuses to turn a visual detection into motion unless the upstream safety_state is READY and the data is confident/fresh enough (INHIBITED wins over REJECTED, mirroring HYDRA-UMC-SAFETY-ZONES), exposed via the 'request' subcommand. 40 tests. Real 6-DOF pose *estimation* (needs the Hailo-8 NPU) and the low-latency gRPC feed to the HYDRA-UMC core remain future work.",
   "native_version": {
     "file": "pyproject.toml",
