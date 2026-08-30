@@ -150,7 +150,7 @@ the loop diagram above - with a real `correct` CLI command; and the
 safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
-CLI command. 40 tests total.
+CLI command. 50 tests total.
 
 **Still ahead, and blocked on real hardware:** 6-DOF pose *estimation*
 from camera frames (needs the Hailo-8 NPU), and the low-latency gRPC
