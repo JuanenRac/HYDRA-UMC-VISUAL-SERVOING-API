@@ -89,7 +89,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 
 ---
 
-## 🏗️ BUILD & RUN
+## 🏗️ BUILD & RUN GUIDE
 
 Requires Python 3.10+.
 
