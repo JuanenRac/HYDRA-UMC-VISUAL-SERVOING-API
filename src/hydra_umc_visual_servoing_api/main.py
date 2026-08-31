@@ -19,6 +19,7 @@ import argparse
 import sys
 from importlib.metadata import PackageNotFoundError, version
 
+from .api import VisualServoingServer
 from .authorization import (
     AuthorizationPolicy,
     RequestOutcome,
@@ -115,6 +116,20 @@ def _cmd_request(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    server = VisualServoingServer((args.addr, args.port), ROLE)
+    print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port}")
+    print("[visual-servoing-api] POST /correct, POST /request, GET /stats")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+        print("[visual-servoing-api] shutting down")
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hydra-umc-visual-servoing-api")
     subparsers = parser.add_subparsers(dest="command")
@@ -163,6 +178,16 @@ def _build_parser() -> argparse.ArgumentParser:
     request.add_argument("--max-angular-speed", type=float, default=None, dest="max_angular_speed",
                           help="Clamp the angular velocity command's norm (rad/s)")
     request.set_defaults(func=_cmd_request)
+
+    serve = subparsers.add_parser(
+        "serve",
+        help="Run the real PBVS correction law and authorization gate as a JSON/HTTP API "
+             "(POST /correct, POST /request) - the same functions the 'correct'/'request' "
+             "subcommands run, reachable from a real caller instead of one-shot CLI args.",
+    )
+    serve.add_argument("--addr", default="127.0.0.1", help="address to bind the HTTP API to")
+    serve.add_argument("--port", type=int, default=8091, help="port for the HTTP API")
+    serve.set_defaults(func=_cmd_serve)
 
     return parser
 

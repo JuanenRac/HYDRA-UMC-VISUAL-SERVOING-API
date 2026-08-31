@@ -26,6 +26,28 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.0.5] - Real v0: JSON/HTTP server mode, plus CM5 deployment
+
+- **`api.py`** (new) - `POST /correct` and `POST /request` reach the
+  exact same `servo.py`/`authorization.py` functions the CLI's
+  `correct`/`request` subcommands already run, over a real stdlib
+  `ThreadingHTTPServer`, reusing `Pose6D.parse`'s exact
+  "x,y,z,roll,pitch,yaw" string format rather than inventing a second
+  pose encoding to keep in sync. `/request`'s `INHIBITED`/`REJECTED`/
+  `ACCEPTED` outcomes are all real, correctly-computed decisions, not
+  server errors - the route answers 200 for all three; 400 is reserved
+  for a genuinely malformed request body. Real gap this closes: this
+  project's own logic was only ever reachable as a one-shot CLI, with no
+  way for HYDRA-UMC-SERVER or any other real caller to reach it.
+- **`main.py`** - new `serve` subcommand (`--addr`/`--port`, default
+  `127.0.0.1:8091`).
+- **`systemd/hydra-umc-visual-servoing-api.service`** (new) - loopback-
+  only unit for `HYDRA-UMC-OS/provisioning/install_visual_servoing_api.sh`
+  (new, that repo), same stdlib "copy src/ + PYTHONPATH" shape as
+  `install_datalake.sh` - this project is genuinely stdlib-only Python.
+- 13 new tests (`tests/test_api.py`, real end-to-end HTTP against a real
+  socket) - 68 total.
+
 ## [0.0.4] - Real HailoRT integration boundary, prepared ahead of the Hailo-8 module
 
 - **Added `src/hydra_umc_visual_servoing_api/hailo_runtime.py`** (new) -
