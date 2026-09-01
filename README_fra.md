@@ -89,7 +89,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 
 ---
 
-## 🏗️ BUILD & RUN
+## 🏗️ BUILD ET EXÉCUTION
 
 Nécessite Python 3.10+.
 
@@ -159,7 +159,7 @@ de pose à 6 degrés de liberté à partir d'images caméra (nécessite la NPU
 Hailo-8), et l'envoi gRPC à faible latence de la commande de vitesse
 résultante vers le cœur HYDRA-UMC.
 
-## 🚀 ROADMAP
+## 🚀 FEUILLE DE ROUTE
 * **Phase 1 :** Synchronisation et étalonnage du pipeline multi-caméras pour 8 flux USB 3.0.
 * **Phase 2 :** Migration vers YOLOv11 et optimisation pour Hailo-8L pour la détection de composants industriels.
 * **Phase 3 :** Reconstruction 3D en temps réel à partir de nœuds de vision stéréo et cartographie dynamique des zones de sécurité.

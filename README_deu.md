@@ -89,7 +89,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 
 ---
 
-## 🏗️ BUILD & RUN
+## 🏗️ BUILD UND AUSFÜHRUNG
 
 Erfordert Python 3.10+.
 
@@ -160,7 +160,7 @@ nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 Hailo-8-NPU) und die gRPC-Übertragung des resultierenden
 Geschwindigkeitsbefehls mit niedriger Latenz an den HYDRA-UMC-Kern.
 
-## 🚀 ROADMAP
+## 🚀 FAHRPLAN
 * **Phase 1:** Multi-Kamera-Pipeline-Synchronisation und Kalibrierung für 8x USB 3.0-Feeds.
 * **Phase 2:** Migration zu YOLOv11 und Hailo-8L-Optimierung für die Erkennung industrieller Komponenten.
 * **Phase 3:** Echtzeit-3D-Rekonstruktion aus Stereo-Vision-Knoten und dynamische Kartierung von Sicherheitszonen.

@@ -158,7 +158,7 @@ tramite il comando CLI `request`. 40 test in totale.
 Hailo-8), e l'invio gRPC a bassa latenza del comando di velocità
 risultante al core HYDRA-UMC.
 
-## 🚀 ROADMAP
+## 🚀 TABELLA DI MARCIA
 * **Fase 1:** Sincronizzazione e calibrazione della pipeline multi-camera per 8 ingressi USB 3.0.
 * **Fase 2:** Migrazione a YOLOv11 e ottimizzazione per Hailo-8L per il rilevamento di componenti industriali.
 * **Fase 3:** Ricostruzione 3D in tempo reale dai nodi di visione stereo e mappatura dinamica delle zone di sicurezza.
