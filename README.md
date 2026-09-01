@@ -184,7 +184,7 @@ This project is part of a larger robotics ecosystem by the same author (JuanenRa
 
 ### Directly Related (outside the family)
 
-- **[HYDRA-UMC](https://github.com/JuanenRac/HYDRA-UMC)** — sends kinematic pose corrections to this firmware.
+- **[HYDRA-UMC](https://github.com/JuanenRac/HYDRA-UMC)** — the STM32 core firmware that receives this API's kinematic pose corrections.
 
 ### Rest of the Ecosystem
 
