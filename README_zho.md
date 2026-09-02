@@ -74,17 +74,21 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │       ├── pose.py           # Pose6D —— 6 自由度位姿（x, y, z, roll, pitch, yaw）
 │       ├── servo.py          # PBVS 修正律：位姿误差 + 速度指令
 │       ├── authorization.py  # 安全联锁策略（INHIBITED/REJECTED/ACCEPTED）
+│       ├── hailo_runtime.py  # 位姿估计器真实的 HailoRT(hailo_platform)集成边界,延迟导入
+│       ├── api.py            # 简洁的 JSON/HTTP 接口(基于 stdlib http.server),桥接 correct/request
 │       └── main.py           # CLI 入口点（裸调用 + `correct` + `request`）
-├── tests/               # 真实 pytest 套件（pose、servo、authorization、CLI）
+├── tests/               # 真实 pytest 套件（pose、servo、authorization、hailo_runtime、api、CLI）
 ├── docs/                # 文档与运动学理论
 ├── build/               # 构建输出（本地 .venv 也存放于此）
 ├── images/              # 媒体与图表
-├── scripts/             # 实用脚本
+├── systemd/
+│   └── hydra-umc-visual-servoing-api.service # 本地 CM5 PBVS 修正 API 的 systemd 单元
 ├── tools/
 │   ├── build_test.py    # 不递增版本号的构建检查
 │   └── ci_validate.py   # CI 使用的清单/CHANGELOG/文档校验
 ├── pyproject.toml       # 包元数据、依赖项、里程表版本号
-├── bump_version.py      # 里程表式版本递增（由 build.sh/.bat 运行）
+├── bump_version.py      # 原生版本的里程表式递增（由 build.sh/.bat 运行）
+├── bump_manifest_version.py # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)
 ├── build.sh / build.bat # venv + 可编辑安装 + 编译检查 + 测试
 ├── build-test.sh / build-test.bat # 不递增版本号的构建检查
 └── run.sh / run.bat     # 从本地 venv 运行入口点

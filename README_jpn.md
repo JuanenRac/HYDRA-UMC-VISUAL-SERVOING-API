@@ -76,17 +76,21 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │       ├── pose.py           # Pose6D —— 6 自由度姿勢（x, y, z, roll, pitch, yaw）
 │       ├── servo.py          # PBVS 補正則：姿勢誤差 + 速度指令
 │       ├── authorization.py  # セーフティゲート付きポリシー（INHIBITED/REJECTED/ACCEPTED）
+│       ├── hailo_runtime.py  # 姿勢推定器の実際のHailoRT(hailo_platform)統合境界、遅延インポート
+│       ├── api.py            # シンプルなJSON/HTTPサーフェス(stdlibのhttp.server)。correct/requestを橋渡し
 │       └── main.py           # CLI エントリポイント（素の呼び出し + `correct` + `request`）
-├── tests/               # 実際の pytest スイート（pose、servo、authorization、CLI）
+├── tests/               # 実際の pytest スイート（pose、servo、authorization、hailo_runtime、api、CLI）
 ├── docs/                # ドキュメントと運動学理論
 ├── build/               # ビルド出力（ローカルの .venv もここに存在）
 ├── images/              # メディアと図表
-├── scripts/             # ユーティリティスクリプト
+├── systemd/
+│   └── hydra-umc-visual-servoing-api.service # ローカルCM5 PBVS補正APIのsystemdユニット
 ├── tools/
 │   ├── build_test.py    # バージョンを増やさないビルドチェック
 │   └── ci_validate.py   # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
 ├── pyproject.toml       # パッケージメタデータ、依存関係、オドメーターバージョン
-├── bump_version.py      # オドメーター式バージョンインクリメント（build.sh/.bat が実行）
+├── bump_version.py      # ネイティブバージョンのオドメーター式インクリメント（build.sh/.bat が実行）
+├── bump_manifest_version.py # hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)
 ├── build.sh / build.bat # venv + editable インストール + コンパイルチェック + テスト
 ├── build-test.sh / build-test.bat # バージョンを増やさないビルドチェック
 └── run.sh / run.bat     # ローカル venv からエントリポイントを実行

@@ -71,17 +71,21 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │       ├── pose.py           # Pose6D - pose de 6-DOF (x, y, z, roll, pitch, yaw)
 │       ├── servo.py          # Ley de corrección PBVS: error de pose + comando de velocidad
 │       ├── authorization.py  # Política con verja de seguridad (INHIBITED/REJECTED/ACCEPTED)
+│       ├── hailo_runtime.py  # Limite real de integracion HailoRT (hailo_platform) del estimador de pose, importado de forma perezosa
+│       ├── api.py            # Superficie JSON/HTTP plana (http.server de stdlib) sobre correct/request
 │       └── main.py           # Entry point CLI (invocación básica + `correct` + `request`)
-├── tests/               # Suite pytest real (pose, servo, authorization, CLI)
+├── tests/               # Suite pytest real (pose, servo, authorization, hailo_runtime, api, CLI)
 ├── docs/                # Documentación y teoría cinemática
 ├── build/               # Salida de build (aquí vive también el .venv local)
 ├── images/              # Medios y diagramas
-├── scripts/             # Scripts de utilidad
+├── systemd/
+│   └── hydra-umc-visual-servoing-api.service # Unidad systemd de la API local de corrección PBVS en la CM5
 ├── tools/
 │   ├── build_test.py    # Comprobación de compilación sin versionado
 │   └── ci_validate.py   # Validación de manifiesto/CHANGELOG/docs usada por CI
 ├── pyproject.toml       # Metadatos del paquete, dependencias, version cuentakilometros
-├── bump_version.py      # Bump de version tipo cuentakilometros (build.sh/.bat)
+├── bump_version.py      # Bump de version nativa tipo cuentakilometros (build.sh/.bat)
+├── bump_manifest_version.py # Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)
 ├── build.sh / build.bat # venv + instalacion editable + compile-check + tests
 ├── build-test.sh / build-test.bat # Comprobación de compilación sin versionado
 └── run.sh / run.bat     # Ejecuta el entry point desde el venv local
