@@ -110,7 +110,7 @@ run.bat
 `build.sh`/`build.bat` incrementan la version del propio `pyproject.toml`
 de este proyecto siguiendo la regla "cuentakilometros" del ecosistema
 (PATCH+1, con acarreo a MINOR al pasar de 9) antes de cada build real, y
-luego hacen compile-check del codigo fuente con `python -m compileall`.
+luego hacen compile-check del código fuente con `python -m compileall`.
 
 Ejemplo real - calcular la corrección de una pose actual a una objetivo:
 
