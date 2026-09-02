@@ -28,6 +28,7 @@ Soporta configuraciones **Eye-in-Hand** (cámara en herramienta) y **Eye-to-Hand
 * 🔄 **Control en Bucle Cerrado:** Bucle de retroalimentación continuo que omite al orquestador de alto nivel para baja latencia. *(objetivo de arquitectura - el envío gRPC al núcleo HYDRA-UMC sigue siendo trabajo futuro.)*
 * 📐 **Estimación de Pose:** Estimación de pose de objeto de 6-DOF desde vistas de cámara única o múltiple. *(trabajo futuro - necesita la NPU Hailo-8 real que este entorno todavía no tiene.)*
 * ⚡ **Acelerado por Hardware:** Utiliza la salida de Hailo-8 para el cálculo instantáneo de coordenadas. *(trabajo futuro, mismo motivo.)*
+* 🔌 **Límite de integración con HailoRT, preparado antes que el módulo:** `hailo_runtime.py` está escrito contra la API real y confirmada de `hailo_platform` (`VDevice`, `HEF`, `ConfigureParams`) - importada de forma perezosa para que este repositorio se instale/testee limpiamente sin el paquete `hailort` ni un módulo Hailo-8 presente - y `hailo_output_to_pose()` adapta un resultado de inferencia real directamente al `Pose6D` que `compute_pose_error()` ya consume. *(implementado, solo límite de integración - ejecutar inferencia de verdad todavía necesita un `.hef` de estimación de pose realmente compilado y un módulo Hailo-8 físico.)*
 
 ---
 
@@ -147,16 +148,19 @@ Ejemplo real - solicitar una corrección con verja de seguridad (aceptada, inhib
 **Real hoy:** la ley de corrección PBVS de error de pose y comando de
 velocidad (`pose.py`, `servo.py`) - el paso "Cálculo de Error (Pose
 Delta)" del diagrama de bucle de arriba - con un comando CLI `correct`
-real; y la política de autorización con verja de seguridad
+real; la política de autorización con verja de seguridad
 (`authorization.py`) que se niega a convertir una detección visual en
 movimiento a menos que el estado de seguridad aguas arriba sea `READY`
 y los datos sean lo bastante confiables/frescos, expuesta vía el comando
-CLI `request`. 40 tests en total.
+CLI `request`; y un límite de integración con HailoRT real (`hailo_runtime.py`)
+listo para un estimador de pose Hailo-8 real en el momento en que se conecte. 57 tests en total.
 
-**Todavía por delante, bloqueado por hardware real:** la estimación real
-de pose de 6-DOF a partir de fotogramas de cámara (necesita la NPU
-Hailo-8), y el envío gRPC de baja latencia del comando de velocidad
-resultante al núcleo HYDRA-UMC.
+**Todavía por delante, bloqueado por hardware real:** ejecutar de verdad
+la *estimación* de pose de 6-DOF a través de `hailo_runtime.py` necesita
+un `.hef` de estimación de pose realmente compilado (aún no se ha elegido
+un modelo concreto) y una NPU Hailo-8 física conectada, y el envío gRPC
+de baja latencia del comando de velocidad resultante al núcleo HYDRA-UMC
+es trabajo futuro aparte.
 
 ## 🚀 HOJA DE RUTA
 * **Fase 1:** Sincronización y calibración del pipeline multi-cámara para 8x entradas USB 3.0.

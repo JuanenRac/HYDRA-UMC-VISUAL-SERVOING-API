@@ -28,6 +28,7 @@ Sie unterstützt sowohl **Eye-in-Hand**- (Kamera am Werkzeug) als auch **Eye-to-
 * 🔄 **Closed-Loop-Steuerung:** Kontinuierliche Feedbackschleife, die den High-Level-Orchestrator für niedrige Latenz umgeht. *(Architekturziel - die gRPC-Übertragung an den HYDRA-UMC-Kern ist noch zukünftige Arbeit.)*
 * 📐 **Pose-Schätzung:** 6-DOF-Objektpose-Schätzung aus Einzel- oder Multi-Kamera-Ansichten. *(zukünftige Arbeit - benötigt die echte Hailo-8-NPU, die diese Umgebung noch nicht hat.)*
 * ⚡ **Hardware-beschleunigt:** Verwendet den Hailo-8-Ausgang für die sofortige Koordinatenberechnung. *(zukünftige Arbeit, gleicher Grund.)*
+* 🔌 **HailoRT-Integrationsgrenze, dem Modul vorausgehend vorbereitet:** `hailo_runtime.py` ist gegen die echte, bestätigte `hailo_platform`-API (`VDevice`, `HEF`, `ConfigureParams`) geschrieben - lazy importiert, sodass dieses Repository ohne installiertes `hailort`-Paket oder vorhandenes Hailo-8-Modul sauber installiert/getestet wird - und `hailo_output_to_pose()` passt ein echtes Inferenzergebnis direkt in das `Pose6D` an, das `compute_pose_error()` bereits konsumiert. *(implementiert, nur Integrationsgrenze - tatsächliche Inferenz auszuführen braucht weiterhin ein echtes, kompiliertes Pose-Schätzungs-`.hef` und ein physisches Hailo-8-Modul.)*
 
 ---
 
@@ -149,16 +150,21 @@ Echtes Beispiel - eine sicherheitsgesperrte Korrektur anfordern (akzeptiert, ges
 **Heute real:** das PBVS-Korrekturgesetz für Pose-Fehler und
 Geschwindigkeitsbefehl (`pose.py`, `servo.py`) - der Schritt
 "Fehlerberechnung (Pose-Delta)" im obigen Schleifendiagramm - mit einem
-echten `correct`-CLI-Befehl; sowie die sicherheitsgesperrte
+echten `correct`-CLI-Befehl; die sicherheitsgesperrte
 Autorisierungs-Policy (`authorization.py`), die eine visuelle Erkennung
 nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 `READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
-über den `request`-CLI-Befehl. Insgesamt 40 Tests.
+über den `request`-CLI-Befehl; sowie eine echte HailoRT-Integrationsgrenze
+(`hailo_runtime.py`), bereit für einen echten Hailo-8-Pose-Schätzer, sobald
+dieser angeschlossen wird. Insgesamt 57 Tests.
 
-**Noch offen, blockiert durch echte Hardware:** die echte
-6-Freiheitsgrad-Posenschätzung aus Kamerabildern (benötigt die
-Hailo-8-NPU) und die gRPC-Übertragung des resultierenden
-Geschwindigkeitsbefehls mit niedriger Latenz an den HYDRA-UMC-Kern.
+**Noch offen, blockiert durch echte Hardware:** die
+6-Freiheitsgrad-Posen-*schätzung* tatsächlich über `hailo_runtime.py`
+laufen zu lassen, braucht ein echtes, kompiliertes Pose-Schätzungs-`.hef`
+(noch kein konkretes Modell gewählt) und eine angeschlossene physische
+Hailo-8-NPU, und die gRPC-Übertragung des resultierenden
+Geschwindigkeitsbefehls mit niedriger Latenz an den HYDRA-UMC-Kern ist
+separate zukünftige Arbeit.
 
 ## 🚀 FAHRPLAN
 * **Phase 1:** Multi-Kamera-Pipeline-Synchronisation und Kalibrierung für 8x USB 3.0-Feeds.

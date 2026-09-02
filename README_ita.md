@@ -28,6 +28,7 @@ Supporta configurazioni **Eye-in-Hand** (telecamera sullo strumento) ed **Eye-to
 * 🔄 **Controllo a circuito chiuso:** Feedback continuo che bypassa l'orchestratore di alto livello per una bassa latenza. *(obiettivo architetturale - l'invio gRPC al core HYDRA-UMC resta lavoro futuro.)*
 * 📐 **Stima della posa:** Stima della posa dell'oggetto 6-DOF da viste a telecamera singola o multipla. *(lavoro futuro - richiede la vera NPU Hailo-8 che questo ambiente non ha ancora.)*
 * ⚡ **Accelerazione hardware:** Utilizza l'output di Hailo-8 per il calcolo istantaneo delle coordinate. *(lavoro futuro, stesso motivo.)*
+* 🔌 **Limite di integrazione HailoRT, preparato in anticipo sul modulo:** `hailo_runtime.py` è scritto contro l'API reale e confermata `hailo_platform` (`VDevice`, `HEF`, `ConfigureParams`) - importata in modo lazy così che questo repository si installi/testi in modo pulito senza il pacchetto `hailort` né un modulo Hailo-8 presente - e `hailo_output_to_pose()` adatta un risultato di inferenza reale direttamente nel `Pose6D` che `compute_pose_error()` già consuma. *(implementato, solo limite di integrazione - eseguire davvero l'inferenza richiede ancora un `.hef` di stima della posa realmente compilato e un modulo Hailo-8 fisico.)*
 
 ---
 
@@ -147,16 +148,20 @@ Esempio reale - richiedere una correzione con blocco di sicurezza (accettata, in
 **Reale oggi:** la legge di correzione PBVS di errore di posa e comando
 di velocità (`pose.py`, `servo.py`) - il passaggio "Calcolo dell'errore
 (Pose Delta)" del diagramma del loop qui sopra - con un comando CLI
-`correct` reale; e la policy di autorizzazione con blocco di sicurezza
+`correct` reale; la policy di autorizzazione con blocco di sicurezza
 (`authorization.py`) che si rifiuta di trasformare una rilevazione
 visiva in movimento a meno che lo stato di sicurezza a monte non sia
 `READY` e i dati non siano abbastanza affidabili/freschi, esposta
-tramite il comando CLI `request`. 40 test in totale.
+tramite il comando CLI `request`; e un vero limite di integrazione
+HailoRT (`hailo_runtime.py`) pronto per un vero stimatore di posa Hailo-8
+non appena viene collegato. 57 test in totale.
 
-**Ancora da fare, bloccato da hardware reale:** la vera stima di posa a
-6 gradi di libertà da fotogrammi della telecamera (richiede la NPU
-Hailo-8), e l'invio gRPC a bassa latenza del comando di velocità
-risultante al core HYDRA-UMC.
+**Ancora da fare, bloccato da hardware reale:** eseguire davvero la
+*stima* di posa a 6 gradi di libertà tramite `hailo_runtime.py` richiede
+un `.hef` di stima della posa realmente compilato (nessun modello
+specifico ancora scelto) e una NPU Hailo-8 fisica collegata, e l'invio
+gRPC a bassa latenza del comando di velocità risultante al core
+HYDRA-UMC è un lavoro futuro separato.
 
 ## 🚀 TABELLA DI MARCIA
 * **Fase 1:** Sincronizzazione e calibrazione della pipeline multi-camera per 8 ingressi USB 3.0.
