@@ -132,19 +132,26 @@ class Handler(BaseHTTPRequestHandler):
                 min_confidence=float(body.get("min_confidence", 0.6)),
                 max_data_age_ms=float(body.get("max_data_age_ms", 200.0)),
             )
+            # Same-request-body-parsing bug this file's own _handle_correct
+            # already avoided: these three MUST be parsed/used inside this
+            # try, not after it - a malformed (e.g. non-numeric) gain/
+            # max_linear_speed/max_angular_speed would otherwise raise past
+            # every except below, crashing the handler thread with an
+            # unhandled traceback and no HTTP response at all instead of a
+            # clean 400 (confirmed live: POST /request with gain: "bad"
+            # closed the connection with no response before this fix).
+            decision = authorize_correction(
+                request, policy,
+                gain=float(body.get("gain", 1.0)),
+                max_linear_speed=body.get("max_linear_speed"),
+                max_angular_speed=body.get("max_angular_speed"),
+            )
         except KeyError as e:
             _write_error(self, 400, f"missing required field: {e}")
             return
         except (ValueError, TypeError) as e:
             _write_error(self, 400, str(e))
             return
-
-        decision = authorize_correction(
-            request, policy,
-            gain=float(body.get("gain", 1.0)),
-            max_linear_speed=body.get("max_linear_speed"),
-            max_angular_speed=body.get("max_angular_speed"),
-        )
         _write_json(self, 200, {
             "outcome": decision.outcome.value,
             "reason": decision.reason,

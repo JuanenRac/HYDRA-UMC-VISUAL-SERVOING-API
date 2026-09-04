@@ -16,15 +16,25 @@ rule rather than semantic-versioning judgment calls:
 - when `PATCH` would exceed 9, it resets to 0 and `MINOR` +1 instead (e.g. `0.0.9` -> `0.1.0`, never `0.0.10`)
 - the same carry cascades into `MAJOR` if `MINOR` would exceed 9
 
-## Unreleased - finite, directional servo safety bounds
+---
+
+## [0.0.7] - finite, directional servo safety bounds + a real crash fixed in POST /request
 
 - **`pose.py` / `servo.py`** - parsed poses reject `NaN` and infinity; gain,
   speed limits and convergence tolerances now require finite positive values.
   A negative speed limit can no longer invert a correction vector and a
   non-finite gain cannot create an unsafe velocity command.
+- **Real bug fixed in `api.py`**: `POST /request` parsed `gain`,
+  `max_linear_speed` and `max_angular_speed` from the request body
+  *after* the try/except that turns a malformed field into a clean `400`
+  - unlike `POST /correct`, which already did this correctly. A
+  non-numeric `gain` (e.g. `"gain": "fast"`) raised an uncaught
+  `ValueError` in the handler thread, closing the connection with no
+  HTTP response at all instead of a `400`. Confirmed live against a
+  real running server before and after the fix. Fixed by moving the
+  parse/call inside the existing try/except, matching `_handle_correct`'s
+  shape; new regression test in `tests/test_api.py`.
 - Added regression tests for non-finite poses, gains and bounds.
-
----
 
 ## [0.0.6]
 

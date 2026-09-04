@@ -158,6 +158,26 @@ def test_request_rejects_missing_field() -> None:
         assert status == 400
 
 
+def test_request_rejects_non_numeric_gain() -> None:
+    """Real bug regression: a malformed (non-numeric) gain/max_linear_speed/
+    max_angular_speed used to be parsed AFTER the request-body try/except,
+    so float() raising ValueError there crashed the handler thread with an
+    unhandled traceback and no HTTP response at all, instead of the clean
+    400 every other malformed field on this route already gets."""
+    with running_server() as base:
+        status, body = _post(f"{base}/request", {
+            "current": "0,0,0,0,0,0",
+            "target": "1,0,0,0,0,0",
+            "frame_id": "cam1-42",
+            "confidence": 0.9,
+            "data_age_ms": 5.0,
+            "safety_state": "READY",
+            "gain": "not-a-number",
+        })
+        assert status == 400
+        assert "float" in body["error"]
+
+
 def test_malformed_json_body_rejected() -> None:
     with running_server() as base:
         req = urllib.request.Request(f"{base}/correct", data=b"{not json", method="POST")
