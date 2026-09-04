@@ -17,27 +17,32 @@ memory.
 
 ```
 $ hydra-umc-visual-servoing-api -h
-usage: hydra-umc-visual-servoing-api [-h] {correct,request} ...
+usage: hydra-umc-visual-servoing-api [-h] {correct,request,serve} ...
 
 positional arguments:
-  {correct,request}
-    correct          Compute the PBVS pose error and velocity command from
-                     current to target pose.
-    request          Authorize and (if accepted) compute a correction from a
-                     full visual target request - real request-vs-
-                     authorization boundary, unlike the lower-level 'correct'
-                     command which always computes a command from a bare pose
-                     pair.
+  {correct,request,serve}
+    correct             Compute the PBVS pose error and velocity command from
+                        current to target pose.
+    request             Authorize and (if accepted) compute a correction from
+                        a full visual target request - real request-vs-
+                        authorization boundary, unlike the lower-level
+                        'correct' command which always computes a command from
+                        a bare pose pair.
+    serve               Run the real PBVS correction law and authorization
+                        gate as a JSON/HTTP API (POST /correct, POST /request)
+                        - the same functions the 'correct'/'request'
+                        subcommands run, reachable from a real caller instead
+                        of one-shot CLI args.
 
 options:
-  -h, --help         show this help message and exit
+  -h, --help            show this help message and exit
 ```
 
 Bare invocation (no subcommand) prints identity/version/role and exits `0`:
 
 ```
 $ hydra-umc-visual-servoing-api
-HYDRA-UMC-VISUAL-SERVOING-API v0.0.3
+HYDRA-UMC-VISUAL-SERVOING-API v0.0.5
 Closed-loop kinematic correction from Hailo-8 visual feedback to real-time pose corrections for the HYDRA-UMC core.
 ```
 
@@ -221,6 +226,48 @@ error: confidence must be within [0.0, 1.0], got 1.5
 $ echo $?
 1
 ```
+
+## `serve [--addr ADDR] [--port PORT]`
+
+Runs the real PBVS correction law and authorization gate as a plain JSON/
+HTTP API (stdlib `http.server`, `ThreadingHTTPServer` - same convention
+this family's other `api.py` files already use) instead of one-shot CLI
+calls - `POST /correct` and `POST /request` reach the exact same
+functions the `correct`/`request` subcommands run above. `ADDR` defaults
+to `127.0.0.1`, `PORT` to `8091`.
+
+```
+$ hydra-umc-visual-servoing-api serve --addr 127.0.0.1 --port 8091
+```
+
+**`GET /stats`** — `{"role": "<the project's own role string>"}`, `200`.
+
+**`POST /correct`** — same fields as the CLI's `correct` flags, as JSON
+(`current`/`target` as `"x,y,z,roll,pitch,yaw"` strings, `gain`/
+`max_linear_speed`/`max_angular_speed`/`linear_tol`/`angular_tol`
+optional):
+
+```bash
+$ curl -X POST http://127.0.0.1:8091/correct \
+    -d '{"current":"0,0,0,0,0,0","target":"0.1,0,0,0,0,0"}'
+{"error": {"dx": 0.1, "dy": 0.0, "dz": 0.0, "droll": 0.0, "dpitch": 0.0, "dyaw": 0.0}, "command": {"vx": 0.1, "vy": 0.0, "vz": 0.0, "wroll": 0.0, "wpitch": 0.0, "wyaw": 0.0}, "converged": false}
+```
+
+Always `200` for a real computed command; `400` for a missing/malformed
+field (missing `current`/`target`, an unparseable pose string, or an
+out-of-range numeric field).
+
+**`POST /request`** — same fields as the CLI's `request` flags, as JSON;
+response body is `{"outcome", "reason", "error", "command"}` - `error`/
+`command` are `null` when `outcome` isn't `ACCEPTED`. Always `200` for a
+well-formed request regardless of outcome (`ACCEPTED`/`REJECTED`/
+`INHIBITED` are real, correctly-computed decisions, not server errors -
+same reasoning as the CLI's own distinct exit codes below); `400` for a
+missing/malformed field.
+
+Any other path, or any non-`GET`/`POST` request, is `404`. There is no
+authentication - same as every other loopback-only internal API on the
+CM5.
 
 ## Exit codes
 

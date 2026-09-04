@@ -1,6 +1,6 @@
 [project]
 name = "hydra-umc-visual-servoing-api"
-version = "0.0.5"
+version = "0.0.6"
 description = "Closed-loop kinematic correction service that turns Hailo-8 visual feedback into real-time pose corrections for the HYDRA-UMC core, supporting Eye-in-Hand and Eye-to-Hand configurations."
 readme = "README.md"
 requires-python = ">=3.10"
