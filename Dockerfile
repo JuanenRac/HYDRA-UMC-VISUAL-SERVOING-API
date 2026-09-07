@@ -27,6 +27,6 @@ RUN pip install --no-cache-dir .
 RUN useradd --system --create-home --home-dir /home/hydra hydra
 USER hydra
 
-EXPOSE 8091
+EXPOSE 8116
 ENTRYPOINT ["hydra-umc-visual-servoing-api"]
-CMD ["serve", "--addr", "0.0.0.0", "--port", "8091"]
+CMD ["serve", "--addr", "0.0.0.0", "--port", "8116"]

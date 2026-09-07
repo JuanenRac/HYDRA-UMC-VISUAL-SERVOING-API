@@ -186,7 +186,7 @@ def _build_parser() -> argparse.ArgumentParser:
              "subcommands run, reachable from a real caller instead of one-shot CLI args.",
     )
     serve.add_argument("--addr", default="127.0.0.1", help="address to bind the HTTP API to")
-    serve.add_argument("--port", type=int, default=8091, help="port for the HTTP API")
+    serve.add_argument("--port", type=int, default=8116, help="port for the HTTP API")
     serve.set_defaults(func=_cmd_serve)
 
     return parser

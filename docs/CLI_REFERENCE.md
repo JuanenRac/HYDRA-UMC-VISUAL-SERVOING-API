@@ -234,10 +234,10 @@ HTTP API (stdlib `http.server`, `ThreadingHTTPServer` - same convention
 this family's other `api.py` files already use) instead of one-shot CLI
 calls - `POST /correct` and `POST /request` reach the exact same
 functions the `correct`/`request` subcommands run above. `ADDR` defaults
-to `127.0.0.1`, `PORT` to `8091`.
+to `127.0.0.1`, `PORT` to `8116`.
 
 ```
-$ hydra-umc-visual-servoing-api serve --addr 127.0.0.1 --port 8091
+$ hydra-umc-visual-servoing-api serve --addr 127.0.0.1 --port 8116
 ```
 
 **`GET /stats`** — `{"role": "<the project's own role string>"}`, `200`.
@@ -248,7 +248,7 @@ $ hydra-umc-visual-servoing-api serve --addr 127.0.0.1 --port 8091
 optional):
 
 ```bash
-$ curl -X POST http://127.0.0.1:8091/correct \
+$ curl -X POST http://127.0.0.1:8116/correct \
     -d '{"current":"0,0,0,0,0,0","target":"0.1,0,0,0,0,0"}'
 {"error": {"dx": 0.1, "dy": 0.0, "dz": 0.0, "droll": 0.0, "dpitch": 0.0, "dyaw": 0.0}, "command": {"vx": 0.1, "vy": 0.0, "vz": 0.0, "wroll": 0.0, "wpitch": 0.0, "wyaw": 0.0}, "converged": false}
 ```

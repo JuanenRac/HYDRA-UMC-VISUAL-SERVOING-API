@@ -18,7 +18,7 @@ User=hydra-umc-visual-servoing-api
 Group=hydra-umc-visual-servoing-api
 WorkingDirectory=/opt/hydra-umc/visual-servoing-api
 Environment=PYTHONPATH=/opt/hydra-umc/visual-servoing-api/src
-ExecStart=/usr/bin/python3 -m hydra_umc_visual_servoing_api.main serve --addr 127.0.0.1 --port 8091
+ExecStart=/usr/bin/python3 -m hydra_umc_visual_servoing_api.main serve --addr 127.0.0.1 --port 8116
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
