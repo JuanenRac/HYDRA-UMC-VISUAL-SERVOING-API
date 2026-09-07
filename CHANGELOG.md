@@ -36,6 +36,17 @@ rule rather than semantic-versioning judgment calls:
   regression in `tests/` could be merged without CI ever failing. CI-only
   fix, no runtime code changed, no version bump.
 
+## [0.0.9] - default loopback port moved off a real collision
+
+Found deploying this service alongside `HYDRA-UMC-VOICE-UI` on the same
+CM5 for the first time: both hardcoded the exact same default loopback
+port (`8091`), so whichever service started second crash-looped forever
+with "Address already in use" - a real conflict, not a hypothetical one.
+Moved this API's own default (CLI flag, systemd unit, Dockerfile, CLI
+reference) to `8116`, the next free slot after this ecosystem's own
+8090-8115 loopback API range. `HYDRA-UMC-VOICE-UI` keeps `8091`, which is
+the one referenced elsewhere across the ecosystem's own deployment docs.
+
 ## [0.0.8] - A non-object JSON body and extreme-but-finite poses no longer crash the handler (SERVO-01/SERVO-02)
 
 Found in an ecosystem-wide software-improvements audit, both P1:
