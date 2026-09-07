@@ -1,0 +1,32 @@
+# =============================================================================
+# HYDRA-UMC-VISUAL-SERVOING-API - Local CM5 PBVS correction API systemd unit
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+# GPL-3.0-or-later - see LICENSE
+# =============================================================================
+# Loopback-only, same as every other internal-only API on this CM5 - this
+# real PBVS correction/authorization law returns a velocity command for a
+# caller to actuate, it never actuates anything itself, but it still has
+# no authentication of its own, so it stays unreachable from the wider LAN.
+[Unit]
+Description=HYDRA-UMC-VISUAL-SERVOING-API real PBVS correction/authorization API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hydra-umc-visual-servoing-api
+Group=hydra-umc-visual-servoing-api
+WorkingDirectory=/opt/hydra-umc/visual-servoing-api
+Environment=PYTHONPATH=/opt/hydra-umc/visual-servoing-api/src
+ExecStart=/usr/bin/python3 -m hydra_umc_visual_servoing_api.main serve --addr 127.0.0.1 --port 8091
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
