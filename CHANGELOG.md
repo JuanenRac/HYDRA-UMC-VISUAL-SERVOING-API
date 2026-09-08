@@ -36,6 +36,30 @@ rule rather than semantic-versioning judgment calls:
   regression in `tests/` could be merged without CI ever failing. CI-only
   fix, no runtime code changed, no version bump.
 
+## [0.1.0] - F05: real safety_state validation + a real end-to-end HYDRA-UMC-SAFETY-ZONES integration test
+
+`authorization.py`'s own docstring already said `VisualTargetRequest.
+safety_state` "intentionally reuses [the SDK's] exact vocabulary so a
+caller wiring a real SafetyState feed in later doesn't have to
+translate" - but nothing ever validated that a caller actually did.
+Any non-empty string passed the old check, so a caller integration bug
+(a typo, a stale value, or - the real one found this pass, see
+`HYDRA-UMC-SAFETY-ZONES`'s own CHANGELOG - a service that never emitted
+the SDK's own vocabulary at all) was silently indistinguishable from a
+real `INHIBITED`/`FAULT`/`SAFE_STOP` safety block. `VisualTargetRequest.
+__post_init__` now rejects any `safety_state` outside the real
+`SDK_SAFETY_STATES` enum (`READY`/`INHIBITED`/`FAULT`/`SAFE_STOP`) with
+its own distinct `ValueError`.
+
+New `tests/test_safety_zones_integration.py`: starts the real
+`HYDRA-UMC-SAFETY-ZONES` HTTP server (a real sibling repo/venv, not
+vendored or reimplemented here - skips if that checkout isn't present),
+feeds it real zones/detections scenarios, and feeds the exact
+`sdkSafetyState.state` string it emits back into this repo's own
+`authorize_correction()` - proving the full real chain (ready/warning/
+danger/expired-calibration, all 4) instead of each repo only ever
+trusting the other's own unit tests in isolation.
+
 ## [0.0.9] - default loopback port moved off a real collision
 
 Found deploying this service alongside `HYDRA-UMC-VOICE-UI` on the same

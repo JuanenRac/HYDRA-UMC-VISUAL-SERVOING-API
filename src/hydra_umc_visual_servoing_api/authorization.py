@@ -42,6 +42,21 @@ from .servo import PoseError, VelocityCommand, compute_pose_error, compute_veloc
 # later doesn't have to translate between two different naming schemes.
 READY_SAFETY_STATE = "READY"
 
+# The real, complete HYDRA-UMC-SDK SafetyState enum (contracts/json-schema/
+# v1/safety-state.schema.json in HYDRA-UMC-SDK) - real gap found and
+# closed 2026-09-08 (private plan's own F05): a caller could previously
+# pass ANY non-empty string as safety_state (a typo, a stale integration,
+# a value from a service that was never actually emitting the SDK's own
+# vocabulary - see HYDRA-UMC-SAFETY-ZONES's own to_sdk_safety_state() for
+# exactly that real bug found on the other end of this same integration)
+# and it would be indistinguishable from a legitimate INHIBITED/FAULT/
+# SAFE_STOP block: both just fail the `!= READY_SAFETY_STATE` check below
+# with a generic reason. Validating against the real enum here surfaces a
+# caller's own integration bug as its own distinct, loud ValueError at
+# construction time, instead of silently masquerading as a real safety
+# block that would send whoever's debugging it looking at the wrong cell.
+SDK_SAFETY_STATES = frozenset({"READY", "INHIBITED", "FAULT", "SAFE_STOP"})
+
 
 class RequestOutcome(str, Enum):
     ACCEPTED = "accepted"
@@ -71,6 +86,12 @@ class VisualTargetRequest:
             raise ValueError(f"data_age_ms must be non-negative, got {self.data_age_ms}")
         if not self.safety_state:
             raise ValueError("safety_state must be a non-empty string")
+        if self.safety_state not in SDK_SAFETY_STATES:
+            raise ValueError(
+                f"safety_state must be one of the real HYDRA-UMC-SDK SafetyState "
+                f"values {sorted(SDK_SAFETY_STATES)}, got {self.safety_state!r} - "
+                f"this is a caller integration bug, not a safety condition"
+            )
 
 
 @dataclass(frozen=True)
