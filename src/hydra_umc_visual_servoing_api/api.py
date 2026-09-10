@@ -46,10 +46,10 @@ def _write_error(handler: BaseHTTPRequestHandler, status: int, message: str) -> 
 MAX_BODY_BYTES = 1024 * 1024
 # How much of an oversized body this drains before responding - a real,
 # reproducible race already found and fixed for this exact class of gap
-# in HYDRA-UMC-ANOMALY-DETECTOR (ecosystem-wide software-improvements
-# audit): rejecting an over-limit request without reading any of it left
-# the client's own send() still in flight when the handler closed the
-# connection, so on a body bigger than the OS socket buffer the client
+# in HYDRA-UMC-ANOMALY-DETECTOR: rejecting an over-limit request without
+# reading any of it left the client's own send() still in flight when the
+# handler closed the connection, so on a body bigger than the OS socket
+# buffer the client
 # saw a raw ConnectionAbortedError instead of this clean 400. Draining up
 # to this many bytes lets the client finish sending before the response
 # goes out, without ever holding more than one bounded read in memory.
@@ -89,8 +89,7 @@ class Handler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, ValueError) as e:
             _write_error(self, 400, f"malformed JSON body: {e}")
             return
-        # SERVO-01 (found in an ecosystem-wide software-improvements
-        # audit, P1): `_read_json_body`'s own return type annotation says
+        # SERVO-01 (P1): `_read_json_body`'s own return type annotation says
         # `dict`, but json.loads() happily returns whatever the body's
         # top-level JSON value actually was - a list ([]), null, a bare
         # string or number are all syntactically valid JSON that parses

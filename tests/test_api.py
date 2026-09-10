@@ -199,7 +199,7 @@ def _post_raw(url: str, raw: bytes) -> tuple[int, dict]:
         return e.code, json.loads(e.read())
 
 
-# SERVO-01 (found in an ecosystem-wide software-improvements audit, P1):
+# SERVO-01 (P1):
 # a syntactically valid JSON body whose TOP LEVEL isn't an object ([],
 # null, a bare string or number) used to crash the handler thread with
 # an uncaught TypeError from body["current"] - no HTTP response reached
@@ -226,7 +226,7 @@ def test_server_still_serves_a_valid_request_after_a_non_object_body() -> None:
 
 
 def test_oversized_json_request_is_rejected_before_parsing() -> None:
-    # Found in an ecosystem-wide software-improvements audit: this
+    # Found while auditing the code: this
     # endpoint used to read Content-Length bytes with no upper bound
     # before parsing - an oversized/malformed header let a caller force
     # unbounded memory buffering. Confirmed real against a live server,

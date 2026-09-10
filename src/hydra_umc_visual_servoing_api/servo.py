@@ -28,8 +28,7 @@ def _require_positive_finite(value: float, label: str) -> None:
 
 
 def _require_all_finite(components: tuple[float, ...], label: str) -> None:
-    """SERVO-02 (found in an ecosystem-wide software-improvements audit,
-    P1): checking that an INPUT is finite (isfinite on x/y/z/roll/pitch/
+    """SERVO-02 (P1): checking that an INPUT is finite (isfinite on x/y/z/roll/pitch/
     yaw, already done in Pose6D.parse) does not guarantee a COMPUTED
     result stays finite - two representable-but-extreme finite poses can
     subtract to inf (float overflow, silent - unlike float ** 2, which
