@@ -86,7 +86,7 @@ def test_velocity_rejects_invalid_speed_limit(maximum):
         )
 
 
-# SERVO-02 (found in an ecosystem-wide software-improvements audit, P1):
+# SERVO-02 (P1):
 # individually-finite pose components can still combine into a
 # non-finite result - a real gap this whole class of test exercises.
 
