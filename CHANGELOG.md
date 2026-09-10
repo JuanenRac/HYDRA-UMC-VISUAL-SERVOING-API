@@ -20,7 +20,7 @@ rule rather than semantic-versioning judgment calls:
 ## [Unreleased] - bounded request bodies, real pytest in CI
 
 - **`api.py`'s `_read_json_body()` now caps request bodies** (`MAX_BODY_BYTES`,
-  1 MiB) - found in an ecosystem-wide software-improvements audit: this
+  1 MiB) - found while auditing the code: this
   endpoint used to read `Content-Length` bytes with no upper bound before
   parsing, so a malformed or oversized header let a caller force unbounded
   memory buffering. An over-limit request is drained (up to `DRAIN_CAP_BYTES`)
@@ -73,7 +73,7 @@ the one referenced elsewhere across the ecosystem's own deployment docs.
 
 ## [0.0.8] - A non-object JSON body and extreme-but-finite poses no longer crash the handler (SERVO-01/SERVO-02)
 
-Found in an ecosystem-wide software-improvements audit, both P1:
+Found while auditing the code, both P1:
 
 - **SERVO-01.** A syntactically valid JSON body whose top level wasn't
   an object - `[]`, `null`, a bare string, a bare number - parsed
