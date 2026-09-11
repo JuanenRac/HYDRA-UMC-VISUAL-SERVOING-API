@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Synchronisation-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
+**Vérification d'honnêteté - ce qui fonctionne réellement aujourd'hui :** la loi de correction PBVS (`pose.py`, `servo.py`), la politique d'autorisation à porte de sécurité (`authorization.py`), l'API JSON/HTTP (`api.py`), et la frontière d'intégration HailoRT (`hailo_runtime.py`) sont réelles et testées - 89 tests qui passent (`pytest tests/`), y compris un vrai test d'intégration de bout en bout contre HYDRA-UMC-SAFETY-ZONES et un aller-retour réel contre un serveur `api.py` en direct, pas seulement des tests unitaires isolés. Rien de tout cela n'a besoin d'une caméra ou d'un NPU pour tourner ou être testé - `correct`/`request`/`serve` fonctionnent déjà aujourd'hui sur des poses synthétiques. La vraie estimation de pose 6-DOF à partir d'un flux caméra, le flux gRPC vers le cœur HYDRA-UMC, et l'exécution réelle de l'inférence via `hailo_runtime.py` restent du travail futur : cet environnement n'a ni module Hailo-8 physique ni `.hef` d'estimation de pose compilé, donc cette frontière d'intégration n'a jamais été exercée contre du vrai matériel. Voir `CHANGELOG.md` pour savoir exactement ce qui a été livré jusqu'à présent, et la propre liste de fonctionnalités de la section 1 ci-dessous pour le détail réel/futur par fonctionnalité.
+
 ---
 
 ## 1. 🛠️ APERÇU TECHNIQUE

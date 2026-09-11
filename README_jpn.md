@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
+**正直な現状確認 - 実際に今動くもの:** PBVS 補正則（`pose.py`、`servo.py`）、セーフティゲート付きの認可ポリシー（`authorization.py`）、JSON/HTTP API（`api.py`）、そして HailoRT 統合境界（`hailo_runtime.py`）は本物であり、テストもされている — 89件のテストが通過している（`pytest tests/`）。これには HYDRA-UMC-SAFETY-ZONES に対する本物のエンドツーエンド統合テストと、稼働中の `api.py` サーバーに対する本物の往復テストが含まれ、孤立した単体テストだけではない。これらはいずれもカメラや NPU なしで実行・テストできる — `correct`/`request`/`serve` は今日、合成的なポーズに対してすでに動作する。カメラ映像からの本物の6自由度ポーズ推定、HYDRA-UMC コアへの gRPC フィード、そして `hailo_runtime.py` を通じた実際の推論実行は、まだ将来の課題だ。この環境には物理的な Hailo-8 モジュールもコンパイル済みのポーズ推定用 `.hef` もないため、その統合境界は実際のハードウェアに対して一度も検証されていない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
+
 ---
 
 ## 1. 🛠️ 技術概要

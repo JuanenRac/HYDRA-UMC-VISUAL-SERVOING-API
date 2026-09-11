@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
+**Comprobación de honestidad - lo que realmente funciona hoy:** la ley de corrección PBVS (`pose.py`, `servo.py`), la política de autorización con puerta de seguridad (`authorization.py`), la API JSON/HTTP (`api.py`) y el límite de integración con HailoRT (`hailo_runtime.py`) son reales y están probados - 89 tests que pasan (`pytest tests/`), incluido un test de integración real de extremo a extremo contra HYDRA-UMC-SAFETY-ZONES y un round-trip real contra un servidor `api.py` en vivo, no solo tests unitarios aislados. Nada de esto necesita cámara ni NPU para ejecutarse o probarse - `correct`/`request`/`serve` funcionan hoy contra poses sintéticas. La estimación real de pose 6-DOF a partir de una cámara, el envío gRPC al núcleo de HYDRA-UMC, y ejecutar de verdad la inferencia a través de `hailo_runtime.py` siguen siendo trabajo futuro: este entorno no tiene un módulo Hailo-8 físico ni un `.hef` de estimación de pose compilado, así que ese límite de integración nunca se ha ejercitado contra hardware real. Consulta `CHANGELOG.md` para ver exactamente qué se ha entregado hasta ahora, y la propia lista de características de la sección 1 más abajo para el desglose real/futuro por característica.
+
 ---
 
 ## 1. 🛠️ VISIÓN GENERAL TÉCNICA
