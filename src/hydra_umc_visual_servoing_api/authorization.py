@@ -44,7 +44,7 @@ READY_SAFETY_STATE = "READY"
 
 # The real, complete HYDRA-UMC-SDK SafetyState enum (contracts/json-schema/
 # v1/safety-state.schema.json in HYDRA-UMC-SDK) - real gap found and
-# closed 2026-09-08 (private plan's own F05): a caller could previously
+# closed while auditing the code (F05): a caller could previously
 # pass ANY non-empty string as safety_state (a typo, a stale integration,
 # a value from a service that was never actually emitting the SDK's own
 # vocabulary - see HYDRA-UMC-SAFETY-ZONES's own to_sdk_safety_state() for
