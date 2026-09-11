@@ -3,7 +3,7 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0 - see LICENSE
 # =============================================================================
-"""Real cross-repo integration test (private plan's own F05): every other
+"""Real cross-repo integration test (F05): every other
 test in this repo passes a hand-typed safety_state string. This one starts
 the REAL HYDRA-UMC-SAFETY-ZONES HTTP server (a real, separate sibling repo/
 package, its own venv - not vendored or reimplemented here), feeds it a real
