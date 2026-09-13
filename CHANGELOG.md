@@ -36,6 +36,26 @@ rule rather than semantic-versioning judgment calls:
   regression in `tests/` could be merged without CI ever failing. CI-only
   fix, no runtime code changed, no version bump.
 
+## [0.1.1] - H039: NaN visual-data age could authorize a correction
+
+- `VisualTargetRequest`/`AuthorizationPolicy`'s own construction-time
+  checks for `confidence`/`data_age_ms`/`min_confidence`/`max_data_age_ms`
+  used bare `< 0`/`<= 0` comparisons for some fields - NaN fails every
+  ordering comparison, so a NaN `data_age_ms` sailed through both that
+  check AND `authorize_correction()`'s own `data_age_ms >
+  max_data_age_ms` freshness gate (`NaN > x` is always false), silently
+  authorizing a correction from visual data of unknown real freshness. A
+  NaN `max_data_age_ms` policy value was worse still: it would have
+  disabled the freshness gate entirely, for every request, forever.
+- Add `_require_finite_real()`: rejects NaN, +/-Infinity, and `bool`
+  (a subclass of `int` in Python - `True`/`False` would otherwise
+  silently pass as `1.0`/a valid non-negative age) before any of the
+  existing range checks run. Applied to all 4 fields; legitimate finite
+  boundary values keep behaving exactly as before.
+- Add regression coverage confirmed to fail without the fix and pass
+  with it, including the exact H039 scenario (a NaN `data_age_ms`/
+  `max_data_age_ms` never reaching `authorize_correction()` at all).
+
 ## [0.1.0] - F05: real safety_state validation + a real end-to-end HYDRA-UMC-SAFETY-ZONES integration test
 
 `authorization.py`'s own docstring already said `VisualTargetRequest.
