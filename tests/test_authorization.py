@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from hydra_umc_visual_servoing_api.authorization import (
@@ -148,6 +150,20 @@ def test_accepted_command_respects_speed_limits():
         {"confidence": 1.1},
         {"data_age_ms": -1.0},
         {"safety_state": ""},
+        # H039: NaN/+-Infinity fail every ordering comparison, so a bare
+        # `< 0` / `not (0 <= x <= 1)` check alone never catches them -
+        # see authorization.py's own _require_finite_real() for the fix.
+        {"confidence": math.nan},
+        {"confidence": math.inf},
+        {"confidence": -math.inf},
+        {"data_age_ms": math.nan},
+        {"data_age_ms": math.inf},
+        {"data_age_ms": -math.inf},
+        # bool is a subclass of int in Python - True/False would
+        # otherwise silently pass every numeric check here (True == 1,
+        # a valid confidence; False == 0, a valid age).
+        {"confidence": True},
+        {"data_age_ms": False},
     ],
 )
 def test_visual_target_request_rejects_invalid_fields(kwargs):
@@ -155,13 +171,46 @@ def test_visual_target_request_rejects_invalid_fields(kwargs):
         _request(**kwargs)
 
 
+def test_h039_nan_data_age_never_reaches_authorize_correction():
+    """The exact H039 scenario: before this fix, authorize_correction()'s
+    own `request.data_age_ms > policy.max_data_age_ms` check silently
+    passed a NaN data_age_ms through as ACCEPTED (NaN > anything is
+    always False) - a correction would have been authorized from visual
+    data of unknown real freshness. Confirms the gate now closes at
+    construction time, before authorize_correction() is ever reached."""
+    with pytest.raises(ValueError, match="data_age_ms"):
+        _request(data_age_ms=math.nan)
+
+
 @pytest.mark.parametrize(
     "kwargs",
-    [{"min_confidence": -0.1}, {"min_confidence": 1.1}, {"max_data_age_ms": 0}, {"max_data_age_ms": -5}],
+    [
+        {"min_confidence": -0.1},
+        {"min_confidence": 1.1},
+        {"max_data_age_ms": 0},
+        {"max_data_age_ms": -5},
+        {"min_confidence": math.nan},
+        {"min_confidence": math.inf},
+        {"max_data_age_ms": math.nan},
+        {"max_data_age_ms": math.inf},
+        {"max_data_age_ms": -math.inf},
+        {"min_confidence": True},
+        {"max_data_age_ms": True},
+    ],
 )
 def test_authorization_policy_rejects_invalid_fields(kwargs):
     with pytest.raises(ValueError):
         AuthorizationPolicy(**kwargs)
+
+
+def test_h039_nan_max_data_age_policy_never_disables_the_freshness_gate():
+    """A NaN max_data_age_ms is even more dangerous than a NaN request
+    field: `X > NaN` is False for every real X, so this policy alone
+    would have made authorize_correction() never reject ANY request for
+    being stale, no matter how old the real data was. Must be refused at
+    policy construction, not discovered later against a real request."""
+    with pytest.raises(ValueError, match="max_data_age_ms"):
+        AuthorizationPolicy(max_data_age_ms=math.nan)
 
 
 def test_correction_decision_defaults_have_no_command_or_error():

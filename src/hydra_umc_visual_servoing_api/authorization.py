@@ -28,11 +28,31 @@ Two distinct block outcomes, not one generic "no":
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 
 from .pose import Pose6D
 from .servo import PoseError, VelocityCommand, compute_pose_error, compute_velocity_command
+
+
+def _require_finite_real(value: object, name: str) -> None:
+    """H039: a bare `if value < 0` / `if value > limit` comparison never
+    catches a NaN payload - NaN fails every ordering comparison, so a
+    NaN `data_age_ms` (or a NaN `max_data_age_ms` policy value) sailed
+    through both this module's own construction-time checks AND
+    `authorize_correction()`'s own `data_age_ms > max_data_age_ms` gate,
+    silently authorizing a correction from visual data whose real
+    freshness was unknown. `math.isfinite()` rejects NaN and
+    +/-Infinity explicitly, closing that gap for every numeric field
+    this module trusts. `isinstance(value, bool)` is checked FIRST since
+    bool is a subclass of int in Python - `0.0 <= True <= 1.0` is true
+    (`True == 1`), so a caller accidentally passing a bool where a real
+    confidence/age reading belongs would otherwise be silently accepted
+    as `1.0`/`True`-as-1, a caller integration bug this raises loudly
+    instead of authorizing on."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise ValueError(f"{name} must be a real, finite number, got {value!r}")
 
 # The only SafetyState value that authorizes a correction - matches the
 # HYDRA-UMC-SDK SafetyState contract's own enum (READY/INHIBITED/FAULT/
@@ -80,8 +100,10 @@ class VisualTargetRequest:
     def __post_init__(self) -> None:
         if not self.frame_id:
             raise ValueError("frame_id must be a non-empty string")
+        _require_finite_real(self.confidence, "confidence")
         if not (0.0 <= self.confidence <= 1.0):
             raise ValueError(f"confidence must be within [0.0, 1.0], got {self.confidence}")
+        _require_finite_real(self.data_age_ms, "data_age_ms")
         if self.data_age_ms < 0:
             raise ValueError(f"data_age_ms must be non-negative, got {self.data_age_ms}")
         if not self.safety_state:
@@ -105,8 +127,10 @@ class AuthorizationPolicy:
     max_data_age_ms: float = 200.0
 
     def __post_init__(self) -> None:
+        _require_finite_real(self.min_confidence, "min_confidence")
         if not (0.0 <= self.min_confidence <= 1.0):
             raise ValueError(f"min_confidence must be within [0.0, 1.0], got {self.min_confidence}")
+        _require_finite_real(self.max_data_age_ms, "max_data_age_ms")
         if self.max_data_age_ms <= 0:
             raise ValueError(f"max_data_age_ms must be positive, got {self.max_data_age_ms}")
 
