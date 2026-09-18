@@ -20,7 +20,7 @@ rule rather than semantic-versioning judgment calls:
 ## [0.1.3] - Fixed a real gap in the HYDRA-UMC-SAFETY-ZONES integration test
 
 - **`tests/test_safety_zones_integration.py`**: HYDRA-UMC-SAFETY-ZONES'
-  own I32 fail-safe fix (a missing `"observation"` field on `POST /check`
+  own observer-health fail-safe fix (a missing `"observation"` field on `POST /check`
   always resolves to `INHIBITED`, before its own breach-level logic ever
   runs) was never reflected here - every scenario in this test omitted
   that field, so the warning/danger-breach assertions were passing
@@ -52,7 +52,7 @@ rule rather than semantic-versioning judgment calls:
   regression in `tests/` could be merged without CI ever failing. CI-only
   fix, no runtime code changed, no version bump.
 
-## [0.1.1] - H039: NaN visual-data age could authorize a correction
+## [0.1.1] - NaN visual-data age could authorize a correction
 
 - `VisualTargetRequest`/`AuthorizationPolicy`'s own construction-time
   checks for `confidence`/`data_age_ms`/`min_confidence`/`max_data_age_ms`
@@ -69,10 +69,10 @@ rule rather than semantic-versioning judgment calls:
   existing range checks run. Applied to all 4 fields; legitimate finite
   boundary values keep behaving exactly as before.
 - Add regression coverage confirmed to fail without the fix and pass
-  with it, including the exact H039 scenario (a NaN `data_age_ms`/
+  with it, including the exact scenario above (a NaN `data_age_ms`/
   `max_data_age_ms` never reaching `authorize_correction()` at all).
 
-## [0.1.0] - F05: real safety_state validation + a real end-to-end HYDRA-UMC-SAFETY-ZONES integration test
+## [0.1.0] - Real safety_state validation + a real end-to-end HYDRA-UMC-SAFETY-ZONES integration test
 
 `authorization.py`'s own docstring already said `VisualTargetRequest.
 safety_state` "intentionally reuses [the SDK's] exact vocabulary so a
