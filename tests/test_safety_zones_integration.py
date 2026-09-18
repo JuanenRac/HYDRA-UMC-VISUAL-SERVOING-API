@@ -83,6 +83,17 @@ def _detections(x: float, y: float, z: float) -> dict:
     return {"objects": [{"id": "op1", "position": {"x": x, "y": y, "z": z}}]}
 
 
+def _fresh_observation() -> dict:
+    # I32 in HYDRA-UMC-SAFETY-ZONES: evaluate_safety() treats a missing
+    # "observation" as fail-safe INHIBITED, before it ever reaches its own
+    # breach-level logic (see safety_state.py's own evaluate_safety()) -
+    # every /check call in this test file needs a real, active, fresh
+    # observation or every scenario below collapses to INHIBITED for the
+    # wrong reason (no evidence) rather than the real one this test is
+    # actually checking (zone breach severity, or calibration staleness).
+    return {"active": True, "observedAt": datetime.now(timezone.utc).isoformat(), "maxAgeSeconds": 30}
+
+
 @pytest.fixture(scope="module")
 def safety_zones_server():
     python = _safety_zones_python()
@@ -129,21 +140,27 @@ def _request_with(safety_state: str) -> RequestOutcome:
 
 
 def test_real_ready_state_from_safety_zones_authorizes_a_correction(safety_zones_server):
-    body = _post(f"{safety_zones_server}/check", {"zones": _zones(), "detections": _detections(50, 50, 50)})
+    body = _post(f"{safety_zones_server}/check", {
+        "zones": _zones(), "detections": _detections(50, 50, 50), "observation": _fresh_observation(),
+    })
     sdk_state = body["sdkSafetyState"]["state"]
     assert sdk_state == "READY"
     assert _request_with(sdk_state) is RequestOutcome.ACCEPTED
 
 
 def test_real_warning_breach_from_safety_zones_blocks_a_correction(safety_zones_server):
-    body = _post(f"{safety_zones_server}/check", {"zones": _zones(), "detections": _detections(5, 5, 5)})
+    body = _post(f"{safety_zones_server}/check", {
+        "zones": _zones(), "detections": _detections(5, 5, 5), "observation": _fresh_observation(),
+    })
     sdk_state = body["sdkSafetyState"]["state"]
     assert sdk_state == "INHIBITED"
     assert _request_with(sdk_state) is RequestOutcome.INHIBITED
 
 
 def test_real_danger_breach_from_safety_zones_blocks_a_correction(safety_zones_server):
-    body = _post(f"{safety_zones_server}/check", {"zones": _zones(), "detections": _detections(1, 1, 1)})
+    body = _post(f"{safety_zones_server}/check", {
+        "zones": _zones(), "detections": _detections(1, 1, 1), "observation": _fresh_observation(),
+    })
     sdk_state = body["sdkSafetyState"]["state"]
     assert sdk_state == "SAFE_STOP"
     assert _request_with(sdk_state) is RequestOutcome.INHIBITED
@@ -152,7 +169,22 @@ def test_real_danger_breach_from_safety_zones_blocks_a_correction(safety_zones_s
 def test_real_expired_calibration_from_safety_zones_blocks_a_correction(safety_zones_server):
     zones = _zones()
     zones["calibration"] = {"version": "cal-0", "source": "manual", "calibrated_at": "2020-01-01", "max_age_days": 30}
-    body = _post(f"{safety_zones_server}/check", {"zones": zones, "detections": _detections(50, 50, 50)})
+    body = _post(f"{safety_zones_server}/check", {
+        "zones": zones, "detections": _detections(50, 50, 50), "observation": _fresh_observation(),
+    })
+    sdk_state = body["sdkSafetyState"]["state"]
+    assert sdk_state == "INHIBITED"
+    assert _request_with(sdk_state) is RequestOutcome.INHIBITED
+
+
+def test_real_missing_observation_from_safety_zones_blocks_a_correction(safety_zones_server):
+    # The real fail-safe this whole fix was about: omitting "observation"
+    # entirely must still resolve to INHIBITED - not because of a zone
+    # breach or stale calibration, but because there is no evidence
+    # backing the detections at all. Kept as its own explicit case so
+    # this specific real behavior stays covered now that every other
+    # test above supplies a real observation.
+    body = _post(f"{safety_zones_server}/check", {"zones": _zones(), "detections": _detections(50, 50, 50)})
     sdk_state = body["sdkSafetyState"]["state"]
     assert sdk_state == "INHIBITED"
     assert _request_with(sdk_state) is RequestOutcome.INHIBITED

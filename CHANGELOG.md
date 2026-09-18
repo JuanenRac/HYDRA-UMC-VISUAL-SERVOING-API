@@ -17,6 +17,22 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.1.3] - Fixed a real gap in the HYDRA-UMC-SAFETY-ZONES integration test
+
+- **`tests/test_safety_zones_integration.py`**: HYDRA-UMC-SAFETY-ZONES'
+  own I32 fail-safe fix (a missing `"observation"` field on `POST /check`
+  always resolves to `INHIBITED`, before its own breach-level logic ever
+  runs) was never reflected here - every scenario in this test omitted
+  that field, so the warning/danger-breach assertions were passing
+  against `INHIBITED` for the wrong reason (no observer evidence at all)
+  rather than the real zone-breach severity this test claims to check.
+  The danger-breach case in particular never actually reached
+  `SAFE_STOP`. Every real `/check` call now supplies a fresh, active
+  `observation`, and a new dedicated test covers the missing-observation
+  fail-safe explicitly, so that real behavior stays covered now that the
+  other tests no longer trigger it by accident. 5/5 passing (was 4, one
+  new).
+
 ## [0.1.2] - bounded request bodies, real pytest in CI
 
 - **`api.py`'s `_read_json_body()` now caps request bodies** (`MAX_BODY_BYTES`,
