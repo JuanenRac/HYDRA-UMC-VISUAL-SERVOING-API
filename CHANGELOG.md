@@ -17,7 +17,7 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
-## [Unreleased] - bounded request bodies, real pytest in CI
+## [0.1.2] - bounded request bodies, real pytest in CI
 
 - **`api.py`'s `_read_json_body()` now caps request bodies** (`MAX_BODY_BYTES`,
   1 MiB) - found while auditing the code: this
