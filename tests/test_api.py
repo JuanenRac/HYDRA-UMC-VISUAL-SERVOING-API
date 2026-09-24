@@ -199,7 +199,7 @@ def _post_raw(url: str, raw: bytes) -> tuple[int, dict]:
         return e.code, json.loads(e.read())
 
 
-# SERVO-01 (P1):
+# (P1):
 # a syntactically valid JSON body whose TOP LEVEL isn't an object ([],
 # null, a bare string or number) used to crash the handler thread with
 # an uncaught TypeError from body["current"] - no HTTP response reached

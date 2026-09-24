@@ -89,7 +89,7 @@ class Handler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, ValueError) as e:
             _write_error(self, 400, f"malformed JSON body: {e}")
             return
-        # SERVO-01 (P1): `_read_json_body`'s own return type annotation says
+        # `_read_json_body`'s own return type annotation says
         # `dict`, but json.loads() happily returns whatever the body's
         # top-level JSON value actually was - a list ([]), null, a bare
         # string or number are all syntactically valid JSON that parses

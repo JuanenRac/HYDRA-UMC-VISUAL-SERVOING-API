@@ -37,7 +37,7 @@ from .servo import PoseError, VelocityCommand, compute_pose_error, compute_veloc
 
 
 def _require_finite_real(value: object, name: str) -> None:
-    """H039: a bare `if value < 0` / `if value > limit` comparison never
+    """a bare `if value < 0` / `if value > limit` comparison never
     catches a NaN payload - NaN fails every ordering comparison, so a
     NaN `data_age_ms` (or a NaN `max_data_age_ms` policy value) sailed
     through both this module's own construction-time checks AND

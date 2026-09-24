@@ -107,11 +107,11 @@ reference) to `8116`, the next free slot after this ecosystem's own
 8090-8115 loopback API range. `HYDRA-UMC-VOICE-UI` keeps `8091`, which is
 the one referenced elsewhere across the ecosystem's own deployment docs.
 
-## [0.0.8] - A non-object JSON body and extreme-but-finite poses no longer crash the handler (SERVO-01/SERVO-02)
+## [0.0.8] - A non-object JSON body and extreme-but-finite poses no longer crash the handler
 
 Found while auditing the code, both P1:
 
-- **SERVO-01.** A syntactically valid JSON body whose top level wasn't
+- **.** A syntactically valid JSON body whose top level wasn't
   an object - `[]`, `null`, a bare string, a bare number - parsed
   successfully (so the existing `except (json.JSONDecodeError,
   ValueError)` never caught it), then crashed the handler thread with
@@ -119,7 +119,7 @@ Found while auditing the code, both P1:
   reached the client at all. `do_POST` now checks `isinstance(body,
   dict)` once, centrally, right after parsing, and returns a real 400
   instead.
-- **SERVO-02.** `_clamp_vector`'s norm was `sqrt(sum(c**2))` - squaring
+- **.** `_clamp_vector`'s norm was `sqrt(sum(c**2))` - squaring
   a perfectly finite but extreme component (~1e200) overflows a float,
   and Python raises `OverflowError` for that specific case (unlike most
   float arithmetic, which silently returns `inf`). Switched to
