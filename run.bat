@@ -33,14 +33,15 @@ if exist ".venv\Scripts\python.exe" (
     set VENV_PY=.venv\Scripts\python.exe
 ) else (
     echo No .venv found - run build.bat first. 1>&2
-    exit /b 1
+    set "HYDRA_UMC_SCRIPT_RESULT=1"
+    goto :hydra_umc_pause
 )
 
 "%VENV_PY%" -m hydra_umc_visual_servoing_api.main %*
-exit /b %errorlevel%
 
 REM HYDRA_UMC_SCRIPT_STANDARD_SAFE_PAUSE
 set "HYDRA_UMC_SCRIPT_RESULT=%ERRORLEVEL%"
+:hydra_umc_pause
 echo.
 echo [INFO] Script completed. Exit code: %HYDRA_UMC_SCRIPT_RESULT%.
 pause
