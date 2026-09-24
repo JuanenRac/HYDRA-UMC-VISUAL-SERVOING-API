@@ -160,10 +160,15 @@ class Handler(BaseHTTPRequestHandler):
                 confidence=float(body["confidence"]),
                 data_age_ms=float(body["data_age_ms"]),
                 safety_state=str(body["safety_state"]),
+                calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
+                calibration_age_days=(float(body["calibration_age_days"]) if body.get("calibration_age_days") is not None else None),
             )
             policy = AuthorizationPolicy(
                 min_confidence=float(body.get("min_confidence", 0.6)),
                 max_data_age_ms=float(body.get("max_data_age_ms", 200.0)),
+                max_calibration_age_days=(
+                    float(body["max_calibration_age_days"]) if body.get("max_calibration_age_days") is not None else None
+                ),
             )
             # Same-request-body-parsing bug this file's own _handle_correct
             # already avoided: these three MUST be parsed/used inside this
