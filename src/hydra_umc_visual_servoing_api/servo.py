@@ -28,7 +28,7 @@ def _require_positive_finite(value: float, label: str) -> None:
 
 
 def _require_all_finite(components: tuple[float, ...], label: str) -> None:
-    """SERVO-02 (P1): checking that an INPUT is finite (isfinite on x/y/z/roll/pitch/
+    """checking that an INPUT is finite (isfinite on x/y/z/roll/pitch/
     yaw, already done in Pose6D.parse) does not guarantee a COMPUTED
     result stays finite - two representable-but-extreme finite poses can
     subtract to inf (float overflow, silent - unlike float ** 2, which
@@ -56,7 +56,7 @@ class PoseError:
 
     @property
     def linear_norm(self) -> float:
-        # SERVO-02: math.hypot (not sqrt(sum(c**2))) - squaring a
+        # math.hypot (not sqrt(sum(c**2))) - squaring a
         # perfectly finite but extreme component (e.g. ~1e200) overflows
         # a float and Python raises OverflowError for that, unlike most
         # float arithmetic, which silently returns inf. hypot computes
@@ -78,7 +78,7 @@ def compute_pose_error(current: Pose6D, target: Pose6D) -> PoseError:
         dpitch=_wrap_angle_diff(target.pitch, current.pitch),
         dyaw=_wrap_angle_diff(target.yaw, current.yaw),
     )
-    # SERVO-02: current/target are each individually guaranteed finite
+    # current/target are each individually guaranteed finite
     # (Pose6D.parse's own isfinite check), but subtracting two
     # representable, extreme values (e.g. 1e308 and -1e308) can still
     # silently overflow to inf - checked here, once, at the real source,
@@ -104,7 +104,7 @@ def _clamp_vector(components: tuple[float, ...], max_norm: float | None) -> tupl
     if max_norm is None:
         return components
     _require_positive_finite(max_norm, "maximum speed")
-    # SERVO-02: hypot, not sqrt(sum(c**2)) - see PoseError.linear_norm's
+    # hypot, not sqrt(sum(c**2)) - see PoseError.linear_norm's
     # own comment for why squaring directly can raise OverflowError on a
     # perfectly finite component.
     norm = math.hypot(*components)
@@ -134,7 +134,7 @@ def compute_velocity_command(
     angular = _clamp_vector(
         (gain * error.droll, gain * error.dpitch, gain * error.dyaw), max_angular_speed
     )
-    # SERVO-02: the real, final safety net. gain * error.dN can silently
+    # the real, final safety net. gain * error.dN can silently
     # overflow to inf even with both operands finite (huge error x huge
     # gain), and when no max_*_speed is given at all, _clamp_vector
     # short-circuits without ever computing or checking a norm -

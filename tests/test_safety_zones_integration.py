@@ -84,7 +84,7 @@ def _detections(x: float, y: float, z: float) -> dict:
 
 
 def _fresh_observation() -> dict:
-    # I32 in HYDRA-UMC-SAFETY-ZONES: evaluate_safety() treats a missing
+    # in HYDRA-UMC-SAFETY-ZONES: evaluate_safety treats a missing
     # "observation" as fail-safe INHIBITED, before it ever reaches its own
     # breach-level logic (see safety_state.py's own evaluate_safety()) -
     # every /check call in this test file needs a real, active, fresh

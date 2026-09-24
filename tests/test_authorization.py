@@ -150,7 +150,7 @@ def test_accepted_command_respects_speed_limits():
         {"confidence": 1.1},
         {"data_age_ms": -1.0},
         {"safety_state": ""},
-        # H039: NaN/+-Infinity fail every ordering comparison, so a bare
+        # NaN/+-Infinity fail every ordering comparison, so a bare
         # `< 0` / `not (0 <= x <= 1)` check alone never catches them -
         # see authorization.py's own _require_finite_real() for the fix.
         {"confidence": math.nan},
@@ -172,7 +172,7 @@ def test_visual_target_request_rejects_invalid_fields(kwargs):
 
 
 def test_h039_nan_data_age_never_reaches_authorize_correction():
-    """The exact H039 scenario: before this fix, authorize_correction()'s
+    """The exact scenario: before this fix, authorize_correction's
     own `request.data_age_ms > policy.max_data_age_ms` check silently
     passed a NaN data_age_ms through as ACCEPTED (NaN > anything is
     always False) - a correction would have been authorized from visual
