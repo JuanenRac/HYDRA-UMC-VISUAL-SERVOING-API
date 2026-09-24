@@ -96,8 +96,19 @@ class VisualTargetRequest:
     confidence: float
     data_age_ms: float
     safety_state: str
+    # Which calibration produced the camera-to-robot transform behind this
+    # estimate, and how old it is. Optional: a policy only demands them when
+    # it sets `max_calibration_age_days`.
+    calibration_version: str | None = None
+    calibration_age_days: float | None = None
 
     def __post_init__(self) -> None:
+        if self.calibration_age_days is not None:
+            _require_finite_real(self.calibration_age_days, "calibration_age_days")
+            if self.calibration_age_days < 0:
+                raise ValueError(f"calibration_age_days must be non-negative, got {self.calibration_age_days}")
+        if self.calibration_version is not None and not self.calibration_version.strip():
+            raise ValueError("calibration_version, when given, must be a non-empty string")
         if not self.frame_id:
             raise ValueError("frame_id must be a non-empty string")
         _require_finite_real(self.confidence, "confidence")
@@ -125,8 +136,16 @@ class AuthorizationPolicy:
 
     min_confidence: float = 0.6
     max_data_age_ms: float = 200.0
+    # When set, a request must name its calibration version and that
+    # calibration must be no older than this many days; None keeps the two
+    # original gates only.
+    max_calibration_age_days: float | None = None
 
     def __post_init__(self) -> None:
+        if self.max_calibration_age_days is not None:
+            _require_finite_real(self.max_calibration_age_days, "max_calibration_age_days")
+            if self.max_calibration_age_days <= 0:
+                raise ValueError(f"max_calibration_age_days must be positive, got {self.max_calibration_age_days}")
         _require_finite_real(self.min_confidence, "min_confidence")
         if not (0.0 <= self.min_confidence <= 1.0):
             raise ValueError(f"min_confidence must be within [0.0, 1.0], got {self.min_confidence}")
@@ -178,6 +197,20 @@ def authorize_correction(
             f"visual data for frame '{request.frame_id}' is {request.data_age_ms}ms "
             f"old, exceeds the maximum {policy.max_data_age_ms}ms",
         )
+
+    if policy.max_calibration_age_days is not None:
+        if request.calibration_version is None or request.calibration_age_days is None:
+            return CorrectionDecision(
+                RequestOutcome.REJECTED,
+                f"frame '{request.frame_id}' names no calibration version and age, "
+                "and this policy requires both",
+            )
+        if request.calibration_age_days > policy.max_calibration_age_days:
+            return CorrectionDecision(
+                RequestOutcome.REJECTED,
+                f"calibration '{request.calibration_version}' is {request.calibration_age_days} days old, "
+                f"exceeds the maximum {policy.max_calibration_age_days}",
+            )
 
     error = compute_pose_error(request.current, request.target)
     command = compute_velocity_command(error, gain, max_linear_speed, max_angular_speed)

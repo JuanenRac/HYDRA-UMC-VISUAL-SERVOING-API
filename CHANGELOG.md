@@ -17,6 +17,15 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.1.4] - Requests can be refused on a stale calibration
+
+- A request may name the calibration behind its camera-to-robot transform
+  (`calibration_version`, `calibration_age_days`). A policy that sets
+  `max_calibration_age_days` (also accepted by `POST /request`) rejects a request that names
+  no calibration or one that is older than the limit, quoting the version in the reason. The
+  boundary is inclusive, an unready cell still inhibits first, and a policy that does not set
+  the limit behaves exactly as before. Six new tests.
+
 ## [0.1.3] - Fixed a real gap in the HYDRA-UMC-SAFETY-ZONES integration test
 
 - **`tests/test_safety_zones_integration.py`**: HYDRA-UMC-SAFETY-ZONES'

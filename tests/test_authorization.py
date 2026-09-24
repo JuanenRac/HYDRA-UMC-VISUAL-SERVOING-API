@@ -217,3 +217,48 @@ def test_correction_decision_defaults_have_no_command_or_error():
     decision = CorrectionDecision(RequestOutcome.REJECTED, "test")
     assert decision.command is None
     assert decision.error is None
+
+
+def _calibrated(**overrides):
+    return _request(calibration_version="cal-3", calibration_age_days=10.0, **overrides)
+
+
+def test_calibration_is_not_required_unless_the_policy_asks_for_it():
+    decision = authorize_correction(_request(), AuthorizationPolicy(), gain=1.0)
+    assert decision.outcome is RequestOutcome.ACCEPTED
+
+
+def test_a_policy_that_requires_calibration_rejects_a_request_without_one():
+    policy = AuthorizationPolicy(max_calibration_age_days=30.0)
+    decision = authorize_correction(_request(), policy, gain=1.0)
+    assert decision.outcome is RequestOutcome.REJECTED
+    assert "calibration" in decision.reason
+
+
+def test_a_stale_calibration_is_rejected_and_a_fresh_one_accepted():
+    policy = AuthorizationPolicy(max_calibration_age_days=30.0)
+    assert authorize_correction(_calibrated(), policy, gain=1.0).outcome is RequestOutcome.ACCEPTED
+    stale = _request(calibration_version="cal-3", calibration_age_days=31.0)
+    decision = authorize_correction(stale, policy, gain=1.0)
+    assert decision.outcome is RequestOutcome.REJECTED
+    assert "cal-3" in decision.reason
+
+
+def test_the_calibration_age_boundary_is_inclusive():
+    policy = AuthorizationPolicy(max_calibration_age_days=30.0)
+    edge = _request(calibration_version="cal-3", calibration_age_days=30.0)
+    assert authorize_correction(edge, policy, gain=1.0).outcome is RequestOutcome.ACCEPTED
+
+
+def test_an_unready_cell_still_wins_over_the_calibration_check():
+    policy = AuthorizationPolicy(max_calibration_age_days=30.0)
+    decision = authorize_correction(_request(safety_state="FAULT"), policy, gain=1.0)
+    assert decision.outcome is RequestOutcome.INHIBITED
+
+
+@pytest.mark.parametrize("bad", [float("nan"), -1.0])
+def test_malformed_calibration_values_are_refused_at_construction(bad):
+    with pytest.raises(ValueError):
+        _request(calibration_version="cal-3", calibration_age_days=bad)
+    with pytest.raises(ValueError):
+        AuthorizationPolicy(max_calibration_age_days=bad)
