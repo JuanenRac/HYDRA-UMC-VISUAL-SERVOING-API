@@ -159,7 +159,7 @@ safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
 CLI command; and a real HailoRT integration boundary (`hailo_runtime.py`)
-ready for a real Hailo-8 pose estimator the moment it plugs in. 79 tests
+ready for a real Hailo-8 pose estimator the moment it plugs in. 114 tests
 total.
 
 **Still ahead, and blocked on real hardware:** actually running 6-DOF
