@@ -45,7 +45,7 @@ rule rather than semantic-versioning judgment calls:
 ## [0.1.2] - bounded request bodies, real pytest in CI
 
 - **`api.py`'s `_read_json_body()` now caps request bodies** (`MAX_BODY_BYTES`,
-  1 MiB) - found while auditing the code: this
+  1 MiB) - found on code review: this
   endpoint used to read `Content-Length` bytes with no upper bound before
   parsing, so a malformed or oversized header let a caller force unbounded
   memory buffering. An over-limit request is drained (up to `DRAIN_CAP_BYTES`)
@@ -118,7 +118,7 @@ the one referenced elsewhere across the ecosystem's own deployment docs.
 
 ## [0.0.8] - A non-object JSON body and extreme-but-finite poses no longer crash the handler
 
-Found while auditing the code, both P1:
+Found on code review, both P1:
 
 - **.** A syntactically valid JSON body whose top level wasn't
   an object - `[]`, `null`, a bare string, a bare number - parsed
@@ -260,10 +260,6 @@ command).
 - Still out of scope, and unchanged from the diagram below: real 6-DOF
   pose *estimation* (needs the Hailo-8 NPU) and the low-latency gRPC
   feed towards the HYDRA-UMC core.
-
-## [0.0.2]
-
-- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
 
 ## [0.0.2] - Real v0: PBVS pose-error and velocity-command correction law
 
