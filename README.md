@@ -4,7 +4,7 @@
 
 # 🎯 HYDRA-UMC-VISUAL-SERVOING-API
 
-<p align="center">🇺🇸 <b>English</b> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | <a href="README_jpn.md">🇯🇵 日本語</a></p>
+<p align="center">🇺🇸 <b>English</b> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | <a href="README_jpn.md">🇯🇵 日本語</a> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 📐 Close-Loop Kinematic Correction via Image Feedback
 
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Honesty check - what actually runs today:** the PBVS correction law (`pose.py`, `servo.py`), the safety-gated authorization policy (`authorization.py`), the JSON/HTTP API (`api.py`), and the HailoRT integration boundary (`hailo_runtime.py`) are real and tested - 104 passing tests (`pytest tests/`), including a real end-to-end integration test against HYDRA-UMC-SAFETY-ZONES and a live `api.py` server round-trip, not isolated unit tests alone. None of this needs a camera or an NPU to run or test - `correct`/`request`/`serve` all work today against synthetic poses. Real 6-DOF pose *estimation* from a camera feed, the gRPC feed to the HYDRA-UMC core, and actually running inference through `hailo_runtime.py` are still future work: this environment has no physical Hailo-8 module or compiled pose-estimation `.hef`, so that integration boundary has never been exercised against real hardware. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+**Honesty check - what actually runs today:** the PBVS correction law (`pose.py`, `servo.py`), the safety-gated authorization policy (`authorization.py`), the JSON/HTTP API (`api.py`), and the HailoRT integration boundary (`hailo_runtime.py`) are real and tested - 115 passing tests (`pytest tests/`), including a real end-to-end integration test against HYDRA-UMC-SAFETY-ZONES and a live `api.py` server round-trip, not isolated unit tests alone. None of this needs a camera or an NPU to run or test - `correct`/`request`/`serve` all work today against synthetic poses. Real 6-DOF pose *estimation* from a camera feed, the gRPC feed to the HYDRA-UMC core, and actually running inference through `hailo_runtime.py` are still future work: this environment has no physical Hailo-8 module or compiled pose-estimation `.hef`, so that integration boundary has never been exercised against real hardware. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
 
 ---
 
@@ -159,7 +159,7 @@ safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
 CLI command; and a real HailoRT integration boundary (`hailo_runtime.py`)
-ready for a real Hailo-8 pose estimator the moment it plugs in. 114 tests
+ready for a real Hailo-8 pose estimator the moment it plugs in. 115 tests
 total.
 
 **Still ahead, and blocked on real hardware:** actually running 6-DOF

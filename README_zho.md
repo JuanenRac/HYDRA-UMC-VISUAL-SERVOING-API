@@ -4,7 +4,7 @@
 
 # 🎯 HYDRA-UMC-VISUAL-SERVOING-API
 
-<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | 🇨🇳 <b>简体中文</b> | <a href="README_jpn.md">🇯🇵 日本語</a></p>
+<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | 🇨🇳 <b>简体中文</b> | <a href="README_jpn.md">🇯🇵 日本語</a> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 📐 通过图像反馈实现的闭环运动学修正
 
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——104 个通过的测试（`pytest tests/`），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
+**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——115 个通过的测试（`pytest tests/`），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
 
 ---
 
@@ -160,7 +160,7 @@ run.bat
 除非上游安全状态为 `READY` 且数据足够可信/新鲜，否则拒绝将视觉检测
 结果转化为运动，通过 `request` CLI 命令暴露;以及一个真实的 HailoRT 集成边界
 (`hailo_runtime.py`),已准备好在真实的 Hailo-8 姿态估计器接入的那一刻使用。
-共计 114 个测试。
+共计 115 个测试。
 
 **仍待完成，受限于真实硬件：** 要真正通过 `hailo_runtime.py` 运行 6 自由度
 位姿*估计*,需要一个真实编译好的姿态估计 `.hef`(目前尚未选定具体模型)

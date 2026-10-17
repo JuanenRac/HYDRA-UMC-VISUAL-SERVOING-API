@@ -4,7 +4,7 @@
 
 # 🎯 HYDRA-UMC-VISUAL-SERVOING-API
 
-<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b></p>
+<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 📐 画像フィードバックによる閉ループ運動学補正
 
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**正直な現状確認 - 実際に今動くもの:** PBVS 補正則（`pose.py`、`servo.py`）、セーフティゲート付きの認可ポリシー（`authorization.py`）、JSON/HTTP API（`api.py`）、そして HailoRT 統合境界（`hailo_runtime.py`）は本物であり、テストもされている — 104件のテストが通過している（`pytest tests/`）。これには HYDRA-UMC-SAFETY-ZONES に対する本物のエンドツーエンド統合テストと、稼働中の `api.py` サーバーに対する本物の往復テストが含まれ、孤立した単体テストだけではない。これらはいずれもカメラや NPU なしで実行・テストできる — `correct`/`request`/`serve` は今日、合成的なポーズに対してすでに動作する。カメラ映像からの本物の6自由度ポーズ推定、HYDRA-UMC コアへの gRPC フィード、そして `hailo_runtime.py` を通じた実際の推論実行は、まだ将来の課題だ。この環境には物理的な Hailo-8 モジュールもコンパイル済みのポーズ推定用 `.hef` もないため、その統合境界は実際のハードウェアに対して一度も検証されていない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
+**正直な現状確認 - 実際に今動くもの:** PBVS 補正則（`pose.py`、`servo.py`）、セーフティゲート付きの認可ポリシー（`authorization.py`）、JSON/HTTP API（`api.py`）、そして HailoRT 統合境界（`hailo_runtime.py`）は本物であり、テストもされている — 115件のテストが通過している（`pytest tests/`）。これには HYDRA-UMC-SAFETY-ZONES に対する本物のエンドツーエンド統合テストと、稼働中の `api.py` サーバーに対する本物の往復テストが含まれ、孤立した単体テストだけではない。これらはいずれもカメラや NPU なしで実行・テストできる — `correct`/`request`/`serve` は今日、合成的なポーズに対してすでに動作する。カメラ映像からの本物の6自由度ポーズ推定、HYDRA-UMC コアへの gRPC フィード、そして `hailo_runtime.py` を通じた実際の推論実行は、まだ将来の課題だ。この環境には物理的な Hailo-8 モジュールもコンパイル済みのポーズ推定用 `.hef` もないため、その統合境界は実際のハードウェアに対して一度も検証されていない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
 
 ---
 
@@ -165,7 +165,7 @@ run.bat
 することを拒否するセーフティゲート付き認可ポリシー（`authorization.py`）を
 `request` CLI コマンドとして実装済み。加えて、実際のHailoRT統合境界
 (`hailo_runtime.py`)も、実際のHailo-8姿勢推定器が接続され次第使える
-ように準備済みです。テストは合計 114 個。
+ように準備済みです。テストは合計 115 個。
 
 **まだ先で、実際のハードウェアに阻まれている：** `hailo_runtime.py` を通じて
 実際に 6 自由度姿勢*推定*を実行するには、実際にコンパイルされた姿勢推定用

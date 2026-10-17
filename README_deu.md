@@ -4,7 +4,7 @@
 
 # 🎯 HYDRA-UMC-VISUAL-SERVOING-API
 
-<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | 🇩🇪 <b>Deutsch</b> | <a href="README_zho.md">🇨🇳 简体中文</a> | <a href="README_jpn.md">🇯🇵 日本語</a></p>
+<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | 🇩🇪 <b>Deutsch</b> | <a href="README_zho.md">🇨🇳 简体中文</a> | <a href="README_jpn.md">🇯🇵 日本語</a> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 📐 Kinematische Korrektur im geschlossenen Regelkreis über Bildfeedback
 
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Synchronisation-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Ehrlichkeitscheck - was heute wirklich funktioniert:** das PBVS-Korrekturgesetz (`pose.py`, `servo.py`), die sicherheitsgesteuerte Autorisierungsrichtlinie (`authorization.py`), die JSON/HTTP-API (`api.py`) und die HailoRT-Integrationsgrenze (`hailo_runtime.py`) sind real und getestet - 104 bestandene Tests (`pytest tests/`), einschließlich eines echten End-to-End-Integrationstests gegen HYDRA-UMC-SAFETY-ZONES und eines echten Round-Trips gegen einen laufenden `api.py`-Server, nicht nur isolierte Unit-Tests. Nichts davon braucht eine Kamera oder eine NPU, um zu laufen oder getestet zu werden - `correct`/`request`/`serve` funktionieren schon heute mit synthetischen Posen. Die echte 6-DOF-Posenschätzung aus einem Kamerabild, der gRPC-Feed zum HYDRA-UMC-Kern und die tatsächliche Ausführung der Inferenz über `hailo_runtime.py` bleiben Zukunftsarbeit: diese Umgebung hat weder ein physisches Hailo-8-Modul noch eine kompilierte Posenschätzungs-`.hef`, sodass diese Integrationsgrenze nie gegen echte Hardware getestet wurde. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde, und die eigene Feature-Liste in Abschnitt 1 weiter unten für die reale/zukünftige Aufschlüsselung pro Funktion.
+**Ehrlichkeitscheck - was heute wirklich funktioniert:** das PBVS-Korrekturgesetz (`pose.py`, `servo.py`), die sicherheitsgesteuerte Autorisierungsrichtlinie (`authorization.py`), die JSON/HTTP-API (`api.py`) und die HailoRT-Integrationsgrenze (`hailo_runtime.py`) sind real und getestet - 115 bestandene Tests (`pytest tests/`), einschließlich eines echten End-to-End-Integrationstests gegen HYDRA-UMC-SAFETY-ZONES und eines echten Round-Trips gegen einen laufenden `api.py`-Server, nicht nur isolierte Unit-Tests. Nichts davon braucht eine Kamera oder eine NPU, um zu laufen oder getestet zu werden - `correct`/`request`/`serve` funktionieren schon heute mit synthetischen Posen. Die echte 6-DOF-Posenschätzung aus einem Kamerabild, der gRPC-Feed zum HYDRA-UMC-Kern und die tatsächliche Ausführung der Inferenz über `hailo_runtime.py` bleiben Zukunftsarbeit: diese Umgebung hat weder ein physisches Hailo-8-Modul noch eine kompilierte Posenschätzungs-`.hef`, sodass diese Integrationsgrenze nie gegen echte Hardware getestet wurde. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde, und die eigene Feature-Liste in Abschnitt 1 weiter unten für die reale/zukünftige Aufschlüsselung pro Funktion.
 
 ---
 
@@ -163,7 +163,7 @@ nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 `READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
 über den `request`-CLI-Befehl; sowie eine echte HailoRT-Integrationsgrenze
 (`hailo_runtime.py`), bereit für einen echten Hailo-8-Pose-Schätzer, sobald
-dieser angeschlossen wird. Insgesamt 114 Tests.
+dieser angeschlossen wird. Insgesamt 115 Tests.
 
 **Noch offen, blockiert durch echte Hardware:** die
 6-Freiheitsgrad-Posen-*schätzung* tatsächlich über `hailo_runtime.py`

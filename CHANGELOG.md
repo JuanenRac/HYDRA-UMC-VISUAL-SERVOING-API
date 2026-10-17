@@ -17,6 +17,12 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.1.5] - Idle connections dropped, Portuguese README
+
+- **Idle connections are dropped:** the HTTP handler had no connection timeout, so a client that opened a connection and sent nothing held a handler thread forever. A silent client is now dropped after 15 seconds; the limit covers socket I/O only, never the time a correction takes.
+- **Tests:** a new test covers the dropped idle connection (115 tests).
+- **Docs:** the README test counts (104 and 114, which disagreed with each other) are corrected, and a README in Portuguese (`README_por.md`) joins the other translations.
+
 ## [0.1.4] - Requests can be refused on a stale calibration
 
 - A request may name the calibration behind its camera-to-robot transform

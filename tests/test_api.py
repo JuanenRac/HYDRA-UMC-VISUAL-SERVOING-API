@@ -247,3 +247,18 @@ def test_oversized_json_request_is_rejected_before_parsing() -> None:
         except urllib.error.HTTPError as error:
             assert error.code == 400
             assert str(MAX_BODY_BYTES) in json.loads(error.read())["error"]
+
+
+def test_a_client_that_sends_nothing_is_dropped_instead_of_holding_a_thread(monkeypatch) -> None:
+    import socket
+    import time
+
+    from hydra_umc_visual_servoing_api.api import Handler
+
+    monkeypatch.setattr(Handler, "timeout", 0.3)
+    with running_server() as base:
+        port = int(base.rsplit(":", 1)[1])
+        with socket.create_connection(("127.0.0.1", port), timeout=5) as client:
+            started = time.monotonic()
+            assert client.recv(1) == b""  # sends nothing; the server closes the connection by itself
+            assert time.monotonic() - started < 3
