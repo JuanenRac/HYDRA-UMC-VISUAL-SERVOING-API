@@ -17,6 +17,11 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.1.7]
+
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
+- Every SPDX identifier, file header, the package metadata, the service units and the README licence line now say GPL-3.0-or-later consistently (the LICENSE file keeps the full GPL-3.0 text).
+
 ## [0.1.6] - Safety limits fixed by the service, explicit zero commands, frame reuse refused
 
 - **The safety policy is fixed by the service, not by the caller:** the minimum confidence, maximum data age, maximum gain, maximum linear and angular speed and command validity are now set when the service starts (`serve --min-confidence ... --max-linear-speed ...`, with conservative defaults: 0.25 m/s, 0.5 rad/s, gain 2). A request body could previously send `min_confidence: 0` and `max_data_age_ms: 1e300` and have any reading authorised; it can now only tighten the limits, and asking for something looser answers `400`.

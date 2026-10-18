@@ -1,7 +1,7 @@
 # =============================================================================
 # HYDRA-UMC-VISUAL-SERVOING-API - src/hydra_umc_visual_servoing_api/servo.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Position-Based Visual Servoing (PBVS) correction law.
 

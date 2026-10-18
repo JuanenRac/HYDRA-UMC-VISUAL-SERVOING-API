@@ -2,7 +2,7 @@
 # =============================================================================
 # HYDRA-UMC-VISUAL-SERVOING-API - bump_version.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Applies the ecosystem-wide "odometer" version bump to this project's own
 # pyproject.toml before every real build: PATCH goes up by 1; if that would

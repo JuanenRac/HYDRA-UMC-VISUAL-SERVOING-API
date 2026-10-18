@@ -1,7 +1,7 @@
 # =============================================================================
 # HYDRA-UMC-VISUAL-SERVOING-API - tests/test_api.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Real end-to-end HTTP tests: a real VisualServoingServer (ThreadingHTTPServer)
 hit with real urllib requests over a real socket, proving POST /correct and

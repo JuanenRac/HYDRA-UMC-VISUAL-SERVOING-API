@@ -1,7 +1,7 @@
 # =============================================================================
 # HYDRA-UMC-VISUAL-SERVOING-API - tests/test_safety_zones_integration.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Real cross-repo integration test: every other
 test in this repo passes a hand-typed safety_state string. This one starts

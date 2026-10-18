@@ -1,10 +1,10 @@
 [project]
 name = "hydra-umc-visual-servoing-api"
-version = "0.1.6"
+version = "0.1.7"
 description = "Closed-loop kinematic correction service that turns Hailo-8 visual feedback into real-time pose corrections for the HYDRA-UMC core, supporting Eye-in-Hand and Eye-to-Hand configurations."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "GPL-3.0-only" }
+license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "JuanenRac", email = "electrohobby3d@gmail.com" }]
 # No runtime dependencies yet - the v0 PBVS correction law (pose.py,
 # servo.py) is plain Python math. Still planned once the rest of the

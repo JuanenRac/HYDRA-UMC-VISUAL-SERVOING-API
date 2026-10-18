@@ -1,7 +1,7 @@
 # =============================================================================
 # HYDRA-UMC-VISUAL-SERVOING-API - src/hydra_umc_visual_servoing_api/__init__.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """HYDRA-UMC-VISUAL-SERVOING-API - closed-loop kinematic correction from
 Hailo-8 visual feedback to real-time pose corrections, running as a
