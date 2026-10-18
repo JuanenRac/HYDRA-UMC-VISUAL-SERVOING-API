@@ -17,6 +17,11 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.1.8]
+
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
+- The licence is written as GPL-3.0-or-later in every header and in the package metadata.
+
 ## [0.1.7]
 
 - Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
