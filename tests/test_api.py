@@ -293,7 +293,7 @@ def test_the_caller_cannot_relax_the_servers_safety_policy() -> None:
             assert "looser" in body["error"]
 
 
-def test_the_attack_from_the_audit_is_refused() -> None:
+def test_a_request_that_relaxes_every_limit_at_once_is_refused() -> None:
     with running_server() as base:
         status, _ = _post(f"{base}/request", _request_body(
             confidence=0.01, data_age_ms=60000, min_confidence=0, max_data_age_ms=1e300, gain=50))
