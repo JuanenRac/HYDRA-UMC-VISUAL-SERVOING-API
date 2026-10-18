@@ -20,6 +20,17 @@
 
 ---
 
+## 📋 速览
+
+| | |
+|---|---|
+| 版本 | `0.1.8` |
+| 成熟度 | 成熟 |
+| 测试 | 128 (`pytest tests/`) |
+| 技术栈 | Python / 6-DOF pose estimation |
+| 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
+| 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
+
 ## 1. 🛠️ 技术概述
 
 **HYDRA-UMC-VISUAL-SERVOING-API** 是感知与运动之间的精密桥梁。它计算目标

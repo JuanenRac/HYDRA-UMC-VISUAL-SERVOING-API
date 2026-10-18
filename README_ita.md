@@ -20,6 +20,17 @@
 
 ---
 
+## 📋 In breve
+
+| | |
+|---|---|
+| Versione | `0.1.8` |
+| Maturità | Consolidato |
+| Test | 128 (`pytest tests/`) |
+| Tecnologia | Python / 6-DOF pose estimation |
+| Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
+| Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
+
 ## 1. 🛠️ PANORAMICA TECNICA
 
 **HYDRA-UMC-VISUAL-SERVOING-API** è il ponte di precisione tra percezione e movimento. Calcola il delta di errore tra una posa desiderata e la posa visiva effettiva di un oggetto, fornendo correzioni cinematiche in tempo reale al core HYDRA-UMC.

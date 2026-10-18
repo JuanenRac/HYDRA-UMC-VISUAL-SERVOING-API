@@ -20,6 +20,17 @@
 
 ---
 
+## 📋 ひと目で
+
+| | |
+|---|---|
+| バージョン | `0.1.8` |
+| 成熟度 | 確立 |
+| テスト | 128 (`pytest tests/`) |
+| 技術 | Python / 6-DOF pose estimation |
+| 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
+| 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
+
 ## 1. 🛠️ 技術概要
 
 **HYDRA-UMC-VISUAL-SERVOING-API** は、知覚と運動をつなぐ精密なブリッジ
