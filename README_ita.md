@@ -14,7 +14,9 @@
   <img src="https://img.shields.io/badge/Sincronizzazione-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Verifica di onestà - cosa funziona davvero oggi:** la legge di correzione PBVS (`pose.py`, `servo.py`), la politica di autorizzazione con cancello di sicurezza (`authorization.py`), l'API JSON/HTTP (`api.py`) e il confine di integrazione HailoRT (`hailo_runtime.py`) sono reali e testati - 115 test superati (`pytest tests/`), incluso un vero test di integrazione end-to-end contro HYDRA-UMC-SAFETY-ZONES e un round-trip reale contro un server `api.py` live, non solo test unitari isolati. Niente di tutto ciò richiede una fotocamera o un NPU per essere eseguito o testato - `correct`/`request`/`serve` funzionano già oggi su pose sintetiche. La vera stima di posa 6-DOF da un feed della fotocamera, il feed gRPC verso il core HYDRA-UMC, e l'effettiva esecuzione dell'inferenza tramite `hailo_runtime.py` restano lavoro futuro: questo ambiente non ha un modulo Hailo-8 fisico né un `.hef` di stima della posa compilato, quindi quel confine di integrazione non è mai stato esercitato contro hardware reale. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
+**Verifica di onestà - cosa funziona davvero oggi:** la legge di correzione PBVS (`pose.py`, `servo.py`), la politica di autorizzazione con cancello di sicurezza (`authorization.py`), l'API JSON/HTTP (`api.py`) e il confine di integrazione HailoRT (`hailo_runtime.py`) sono reali e testati - 128 test superati (`pytest tests/`), incluso un vero test di integrazione end-to-end contro HYDRA-UMC-SAFETY-ZONES e un round-trip reale contro un server `api.py` live, non solo test unitari isolati. Niente di tutto ciò richiede una fotocamera o un NPU per essere eseguito o testato - `correct`/`request`/`serve` funzionano già oggi su pose sintetiche. La vera stima di posa 6-DOF da un feed della fotocamera, il feed gRPC verso il core HYDRA-UMC, e l'effettiva esecuzione dell'inferenza tramite `hailo_runtime.py` restano lavoro futuro: questo ambiente non ha un modulo Hailo-8 fisico né un `.hef` di stima della posa compilato, quindi quel confine di integrazione non è mai stato esercitato contro hardware reale. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
+
+**Chi fissa i limiti di sicurezza:** i limiti (confidenza minima, età massima del dato, guadagno massimo, velocità lineare e angolare massime, validità del comando) sono fissati all'avvio del servizio (`serve --max-linear-speed ...`, valori sicuri predefiniti: 0,25 m/s, 0,5 rad/s, guadagno 2). Una richiesta può solo inasprirli: chiedere qualcosa di più permissivo è un `400`, e `safety_state`, `confidence` e `data_age_ms` restano autodichiarati dal chiamante, quindi serve un vero flusso SAFETY-ZONES prima di collegare un robot. Ogni risposta porta un comando: una richiesta rifiutata o una posa convergente riceve un comando zero esplicito con `"hold": true`, oltre a `issued_at_ms`, `valid_for_ms` e `seq`; **il consumatore deve fermarsi se non arriva un comando valido più recente entro `valid_for_ms`**. Lo stesso `frame_id` non può produrre due comandi. Non ancora fatto: l'errore angolare è la differenza di angoli di Eulero (non un errore asse-angolo), quindi inaffidabile vicino a un beccheggio di 90 gradi; non viene applicata alcuna calibrazione mano-occhio, quindi Eye-in-Hand ed Eye-to-Hand non sono ancora distinti; l'anello non ha memoria (nessun limitatore di variazione, filtro o timer di perdita di visione).
 
 ---
 
@@ -137,7 +139,7 @@ Esempio reale - richiedere una correzione con blocco di sicurezza (accettata, in
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
 # outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
 # pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
-# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+# velocity cmd : vx=0.250000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
 
 ./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
@@ -161,7 +163,7 @@ visiva in movimento a meno che lo stato di sicurezza a monte non sia
 `READY` e i dati non siano abbastanza affidabili/freschi, esposta
 tramite il comando CLI `request`; e un vero limite di integrazione
 HailoRT (`hailo_runtime.py`) pronto per un vero stimatore di posa Hailo-8
-non appena viene collegato. 115 test in totale.
+non appena viene collegato. 128 test in totale.
 
 **Ancora da fare, bloccato da hardware reale:** eseguire davvero la
 *stima* di posa a 6 gradi di libertà tramite `hailo_runtime.py` richiede

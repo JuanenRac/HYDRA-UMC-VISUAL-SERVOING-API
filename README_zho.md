@@ -14,7 +14,9 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——115 个通过的测试（`pytest tests/`），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
+**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——128 个通过的测试（`pytest tests/`），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
+
+**谁来设定安全限制：** 限制（最低置信度、数据最大时效、最大增益、最大线速度和角速度、命令有效期）在服务启动时固定（`serve --max-linear-speed ...`，安全默认值：0.25 m/s、0.5 rad/s、增益 2）。请求只能收紧这些限制：要求更宽松的值会得到 `400`；`safety_state`、`confidence` 和 `data_age_ms` 仍由调用方自行声明，因此在连接机器人之前需要真实的 SAFETY-ZONES 数据源。每个响应都带有命令：被拒绝的请求或已收敛的位姿会得到 `"hold": true` 的明确零命令，以及 `issued_at_ms`、`valid_for_ms` 和 `seq`；**如果在 `valid_for_ms` 内没有收到更新的有效命令，消费方必须停止。** 同一个 `frame_id` 不能产生两条命令。尚未完成：角度误差是欧拉角之差（不是轴角误差），因此在俯仰角接近 90 度时不可靠；没有应用手眼标定，所以尚不区分 Eye-in-Hand 与 Eye-to-Hand；控制回路没有记忆（没有速率限制、滤波器或视觉丢失计时器）。
 
 ---
 
@@ -139,7 +141,7 @@ run.bat
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
 # outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
 # pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
-# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+# velocity cmd : vx=0.250000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
 
 ./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
@@ -160,7 +162,7 @@ run.bat
 除非上游安全状态为 `READY` 且数据足够可信/新鲜，否则拒绝将视觉检测
 结果转化为运动，通过 `request` CLI 命令暴露;以及一个真实的 HailoRT 集成边界
 (`hailo_runtime.py`),已准备好在真实的 Hailo-8 姿态估计器接入的那一刻使用。
-共计 115 个测试。
+共计 128 个测试。
 
 **仍待完成，受限于真实硬件：** 要真正通过 `hailo_runtime.py` 运行 6 自由度
 位姿*估计*,需要一个真实编译好的姿态估计 `.hef`(目前尚未选定具体模型)

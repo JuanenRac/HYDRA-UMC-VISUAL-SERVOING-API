@@ -46,7 +46,7 @@ def test_inhibited_when_safety_state_not_ready():
 
 @pytest.mark.parametrize("state", sorted(SDK_SAFETY_STATES))
 def test_every_real_sdk_safety_state_is_a_valid_request(state):
-    # Real HYDRA-UMC-SDK contract conformance (F05) - all 4 real values
+    # Real HYDRA-UMC-SDK contract conformance - all 4 real values
     # construct cleanly; only READY authorizes, the other 3 all resolve
     # to INHIBITED via the same real check, exercised for each of them.
     decision = authorize_correction(_request(safety_state=state), AuthorizationPolicy(), gain=1.0)
@@ -57,7 +57,7 @@ def test_every_real_sdk_safety_state_is_a_valid_request(state):
 
 
 def test_rejects_a_safety_state_outside_the_real_sdk_enum():
-    # The real gap found and closed 2026-09-08 (F05): a caller integration
+    # The real gap found and closed 2026-09-08: a caller integration
     # bug (a typo, a stale value, a service that never actually emitted
     # the SDK's own vocabulary) must surface as its own distinct,
     # immediate ValueError - not be silently treated as just another

@@ -17,6 +17,15 @@ rule rather than semantic-versioning judgment calls:
 
 ---
 
+## [0.1.6] - Safety limits fixed by the service, explicit zero commands, frame reuse refused
+
+- **The safety policy is fixed by the service, not by the caller:** the minimum confidence, maximum data age, maximum gain, maximum linear and angular speed and command validity are now set when the service starts (`serve --min-confidence ... --max-linear-speed ...`, with conservative defaults: 0.25 m/s, 0.5 rad/s, gain 2). A request body could previously send `min_confidence: 0` and `max_data_age_ms: 1e300` and have any reading authorised; it can now only tighten the limits, and asking for something looser answers `400`.
+- **Commands are always bounded:** speed saturation is on by default in the service and in the CLI (`correct`/`request` default to the same limits), instead of being optional.
+- **A command never means "keep going":** a refused request, a rejected frame or a converged pose now returns an explicit zero command with `"hold": true` instead of `null`, and every command carries `issued_at_ms`, `valid_for_ms`, `seq` and `frame_id`; the consumer must stop when no newer valid command arrives in time. The same `frame_id` cannot produce a second accepted command.
+- **Stricter request parsing:** booleans and strings are no longer accepted as numbers for any field of `/correct` and `/request`.
+- **The CLI reports bad values:** `correct --gain 0` or a zero speed limit ends with a message and exit code 1 instead of a traceback.
+- **Docs:** the README (all languages) says who sets the limits, the command contract and what is not done yet (Euler-angle error, no hand-eye calibration, no loop memory); internal tracking codes are removed from the manifest and comments (128 tests).
+
 ## [0.1.5] - Idle connections dropped, Portuguese README
 
 - **Idle connections are dropped:** the HTTP handler had no connection timeout, so a client that opened a connection and sent nothing held a handler thread forever. A silent client is now dropped after 15 seconds; the limit covers socket I/O only, never the time a correction takes.

@@ -20,6 +20,10 @@ from contextlib import contextmanager
 import pytest
 
 from hydra_umc_visual_servoing_api.api import VisualServoingServer
+from hydra_umc_visual_servoing_api.limits import ServoLimits
+
+# Limits loose enough for the tests that check the arithmetic of the control law.
+GENEROUS = ServoLimits(max_gain=100.0, max_linear_speed=100.0, max_angular_speed=100.0)
 
 
 def _post(url: str, body: dict) -> tuple[int, dict]:
@@ -41,8 +45,8 @@ def _get(url: str) -> tuple[int, dict]:
 
 
 @contextmanager
-def running_server() -> Iterator[str]:
-    server = VisualServoingServer(("127.0.0.1", 0), "test role")
+def running_server(limits: ServoLimits | None = None) -> Iterator[str]:
+    server = VisualServoingServer(("127.0.0.1", 0), "test role", limits)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -68,7 +72,7 @@ def test_not_found() -> None:
 
 
 def test_correct_computes_real_pose_error_and_command() -> None:
-    with running_server() as base:
+    with running_server(GENEROUS) as base:
         status, body = _post(f"{base}/correct", {
             "current": "0,0,0,0,0,0",
             "target": "1,0,0,0,0,0",
@@ -81,7 +85,7 @@ def test_correct_computes_real_pose_error_and_command() -> None:
 
 
 def test_correct_clamps_to_max_linear_speed() -> None:
-    with running_server() as base:
+    with running_server(GENEROUS) as base:
         status, body = _post(f"{base}/correct", {
             "current": "0,0,0,0,0,0",
             "target": "10,0,0,0,0,0",
@@ -106,7 +110,7 @@ def test_correct_rejects_missing_field() -> None:
 
 
 def test_request_accepted_with_ready_safety_state() -> None:
-    with running_server() as base:
+    with running_server(GENEROUS) as base:
         status, body = _post(f"{base}/request", {
             "current": "0,0,0,0,0,0",
             "target": "1,0,0,0,0,0",
@@ -133,7 +137,9 @@ def test_request_inhibited_when_not_ready() -> None:
         })
         assert status == 200
         assert body["outcome"] == "inhibited"
-        assert body["command"] is None
+        # never "no command": an explicit zero that tells the consumer to hold
+        assert body["command"]["hold"] is True
+        assert {body["command"][k] for k in ("vx", "vy", "vz", "wroll", "wpitch", "wyaw")} == {0.0}
 
 
 def test_request_rejected_when_stale() -> None:
@@ -177,7 +183,7 @@ def test_request_rejects_non_numeric_gain() -> None:
             "gain": "not-a-number",
         })
         assert status == 400
-        assert "float" in body["error"]
+        assert "gain" in body["error"] and "number" in body["error"]
 
 
 def test_malformed_json_body_rejected() -> None:
@@ -218,7 +224,7 @@ def test_server_still_serves_a_valid_request_after_a_non_object_body() -> None:
     # The real regression this closes: a crashed handler thread used to
     # leave the connection in a state where the NEXT, perfectly valid
     # request could also fail - confirm the server keeps working.
-    with running_server() as base:
+    with running_server(GENEROUS) as base:
         _post_raw(f"{base}/correct", b"[]")
         status, body = _post(f"{base}/correct", {"current": "0,0,0,0,0,0", "target": "1,0,0,0,0,0"})
         assert status == 200
@@ -262,3 +268,97 @@ def test_a_client_that_sends_nothing_is_dropped_instead_of_holding_a_thread(monk
             started = time.monotonic()
             assert client.recv(1) == b""  # sends nothing; the server closes the connection by itself
             assert time.monotonic() - started < 3
+
+
+def _request_body(**overrides):
+    body = {
+        "current": "0,0,0,0,0,0", "target": "5,0,0,0,0,0", "frame_id": "f-1",
+        "confidence": 0.9, "data_age_ms": 10.0, "safety_state": "READY",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_the_caller_cannot_relax_the_servers_safety_policy() -> None:
+    with running_server() as base:
+        for relaxed in (
+            {"min_confidence": 0.0},
+            {"max_data_age_ms": 1e300},
+            {"gain": 50.0},
+            {"max_linear_speed": 1000.0},
+            {"max_angular_speed": 1000.0},
+        ):
+            status, body = _post(f"{base}/request", _request_body(**relaxed))
+            assert status == 400, relaxed
+            assert "looser" in body["error"]
+
+
+def test_the_attack_from_the_audit_is_refused() -> None:
+    with running_server() as base:
+        status, _ = _post(f"{base}/request", _request_body(
+            confidence=0.01, data_age_ms=60000, min_confidence=0, max_data_age_ms=1e300, gain=50))
+        assert status == 400
+
+
+def test_a_caller_may_tighten_the_policy() -> None:
+    with running_server() as base:
+        status, body = _post(f"{base}/request", _request_body(confidence=0.7, min_confidence=0.8))
+        assert status == 200 and body["outcome"] == "rejected"
+        status, body = _post(f"{base}/request", _request_body(frame_id="f-2", max_linear_speed=0.1))
+        assert status == 200 and body["outcome"] == "accepted"
+        assert abs(body["command"]["vx"]) <= 0.1 + 1e-9
+
+
+def test_the_default_limits_saturate_the_command() -> None:
+    with running_server() as base:
+        status, body = _post(f"{base}/request", _request_body())
+        assert status == 200 and body["outcome"] == "accepted"
+        assert body["command"]["vx"] == pytest.approx(0.25)
+
+
+def test_a_rejected_request_returns_an_explicit_zero_command_that_expires() -> None:
+    with running_server() as base:
+        status, body = _post(f"{base}/request", _request_body(confidence=0.1))
+        assert body["outcome"] == "rejected"
+        command = body["command"]
+        assert command["hold"] is True and command["vx"] == 0.0
+        assert command["valid_for_ms"] > 0 and command["issued_at_ms"] > 0 and command["seq"] >= 1
+        assert command["frame_id"] == "f-1"
+
+
+def test_commands_carry_an_increasing_sequence_number() -> None:
+    with running_server() as base:
+        first = _post(f"{base}/request", _request_body(frame_id="a"))[1]["command"]["seq"]
+        second = _post(f"{base}/request", _request_body(frame_id="b"))[1]["command"]["seq"]
+        assert second > first
+
+
+def test_the_same_frame_cannot_produce_two_commands() -> None:
+    with running_server() as base:
+        assert _post(f"{base}/request", _request_body(frame_id="same"))[1]["outcome"] == "accepted"
+        again = _post(f"{base}/request", _request_body(frame_id="same"))[1]
+        assert again["outcome"] == "rejected" and "already used" in again["reason"]
+        assert again["command"]["hold"] is True
+
+
+def test_a_converged_pose_commands_zero() -> None:
+    with running_server() as base:
+        status, body = _post(f"{base}/correct", {"current": "0,0,0,0,0,0", "target": "0.0001,0,0,0,0,0"})
+        assert status == 200 and body["converged"] is True
+        assert body["command"]["vx"] == 0.0 and body["command"]["hold"] is True
+
+
+def test_booleans_and_strings_are_not_numbers() -> None:
+    with running_server() as base:
+        for field, value in (("max_linear_speed", True), ("gain", "1.0"), ("min_confidence", False)):
+            status, _ = _post(f"{base}/request", _request_body(**{field: value}))
+            assert status == 400, field
+
+
+def test_a_server_started_with_stricter_limits_enforces_them() -> None:
+    limits = ServoLimits(min_confidence=0.95, max_linear_speed=0.05)
+    with running_server(limits) as base:
+        status, body = _post(f"{base}/request", _request_body(confidence=0.9))
+        assert body["outcome"] == "rejected"
+        status, body = _post(f"{base}/request", _request_body(frame_id="g", confidence=0.99))
+        assert body["command"]["vx"] == pytest.approx(0.05)

@@ -16,6 +16,8 @@
 
 **正直な現状確認 - 実際に今動くもの:** PBVS 補正則（`pose.py`、`servo.py`）、セーフティゲート付きの認可ポリシー（`authorization.py`）、JSON/HTTP API（`api.py`）、そして HailoRT 統合境界（`hailo_runtime.py`）は本物であり、テストもされている — 115件のテストが通過している（`pytest tests/`）。これには HYDRA-UMC-SAFETY-ZONES に対する本物のエンドツーエンド統合テストと、稼働中の `api.py` サーバーに対する本物の往復テストが含まれ、孤立した単体テストだけではない。これらはいずれもカメラや NPU なしで実行・テストできる — `correct`/`request`/`serve` は今日、合成的なポーズに対してすでに動作する。カメラ映像からの本物の6自由度ポーズ推定、HYDRA-UMC コアへの gRPC フィード、そして `hailo_runtime.py` を通じた実際の推論実行は、まだ将来の課題だ。この環境には物理的な Hailo-8 モジュールもコンパイル済みのポーズ推定用 `.hef` もないため、その統合境界は実際のハードウェアに対して一度も検証されていない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
 
+**安全上の制限を決めるのは誰か：** 制限（最小信頼度、データの最大経過時間、最大ゲイン、最大の直線・角速度、コマンドの有効期間）はサービス起動時に固定されます（`serve --max-linear-speed ...`、安全な既定値：0.25 m/s、0.5 rad/s、ゲイン 2）。リクエストはそれを厳しくすることしかできず、より緩い値を求めると `400` になります。`safety_state`、`confidence`、`data_age_ms` は呼び出し側の自己申告のままなので、ロボットを接続する前に実際の SAFETY-ZONES の入力が必要です。すべての応答にコマンドが含まれます。拒否されたリクエストや収束した姿勢には `"hold": true` の明示的なゼロコマンドが返り、`issued_at_ms`、`valid_for_ms`、`seq` も付きます。**利用側は、`valid_for_ms` 以内により新しい有効なコマンドが届かなければ停止しなければなりません。** 同じ `frame_id` から 2 つのコマンドは生成されません。未対応：角度誤差はオイラー角の差であり（軸角誤差ではない）、ピッチ 90 度付近では信頼できません。ハンドアイ校正は適用されないため、Eye-in-Hand と Eye-to-Hand はまだ区別されません。制御ループは記憶を持ちません（レート制限、フィルター、視覚喪失タイマーなし）。
+
 ---
 
 ## 1. 🛠️ 技術概要
@@ -143,7 +145,7 @@ run.bat
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
 # outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
 # pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
-# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+# velocity cmd : vx=0.250000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
 
 ./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
@@ -165,7 +167,7 @@ run.bat
 することを拒否するセーフティゲート付き認可ポリシー（`authorization.py`）を
 `request` CLI コマンドとして実装済み。加えて、実際のHailoRT統合境界
 (`hailo_runtime.py`)も、実際のHailo-8姿勢推定器が接続され次第使える
-ように準備済みです。テストは合計 115 個。
+ように準備済みです。テストは合計 128 個。
 
 **まだ先で、実際のハードウェアに阻まれている：** `hailo_runtime.py` を通じて
 実際に 6 自由度姿勢*推定*を実行するには、実際にコンパイルされた姿勢推定用

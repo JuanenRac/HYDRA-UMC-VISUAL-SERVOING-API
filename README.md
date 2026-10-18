@@ -14,7 +14,9 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Honesty check - what actually runs today:** the PBVS correction law (`pose.py`, `servo.py`), the safety-gated authorization policy (`authorization.py`), the JSON/HTTP API (`api.py`), and the HailoRT integration boundary (`hailo_runtime.py`) are real and tested - 115 passing tests (`pytest tests/`), including a real end-to-end integration test against HYDRA-UMC-SAFETY-ZONES and a live `api.py` server round-trip, not isolated unit tests alone. None of this needs a camera or an NPU to run or test - `correct`/`request`/`serve` all work today against synthetic poses. Real 6-DOF pose *estimation* from a camera feed, the gRPC feed to the HYDRA-UMC core, and actually running inference through `hailo_runtime.py` are still future work: this environment has no physical Hailo-8 module or compiled pose-estimation `.hef`, so that integration boundary has never been exercised against real hardware. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+**Honesty check - what actually runs today:** the PBVS correction law (`pose.py`, `servo.py`), the safety-gated authorization policy (`authorization.py`), the JSON/HTTP API (`api.py`), and the HailoRT integration boundary (`hailo_runtime.py`) are real and tested - 128 passing tests (`pytest tests/`), including a real end-to-end integration test against HYDRA-UMC-SAFETY-ZONES and a live `api.py` server round-trip, not isolated unit tests alone. None of this needs a camera or an NPU to run or test - `correct`/`request`/`serve` all work today against synthetic poses. Real 6-DOF pose *estimation* from a camera feed, the gRPC feed to the HYDRA-UMC core, and actually running inference through `hailo_runtime.py` are still future work: this environment has no physical Hailo-8 module or compiled pose-estimation `.hef`, so that integration boundary has never been exercised against real hardware. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+
+**Who sets the safety limits:** the limits (minimum confidence, maximum data age, maximum gain, maximum linear and angular speed, command validity) are fixed when the service starts (`serve --max-linear-speed ...`, safe defaults: 0.25 m/s, 0.5 rad/s, gain 2). A request can only tighten them: asking for something looser is a `400`, and the caller's own `safety_state`, `confidence` and `data_age_ms` are still self-declared, so a real SAFETY-ZONES feed is needed before connecting a robot. Every answer carries a command: a refused request or a converged pose gets an explicit zero command with `"hold": true`, plus `issued_at_ms`, `valid_for_ms` and `seq`; **the consumer must stop when no newer valid command arrives within `valid_for_ms`**. The same `frame_id` cannot produce two commands. Not done yet: the angular error is the difference of Euler angles (not an axis-angle error), so it is unreliable near a pitch of 90 degrees; no hand-eye calibration is applied, so Eye-in-Hand and Eye-to-Hand are not distinguished yet; the control loop has no memory (no rate limit, filter or loss-of-vision timer).
 
 ---
 
@@ -137,7 +139,7 @@ Real example - request a safety-gated correction (accepted, inhibited, and rejec
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state READY
 # outcome : ACCEPTED - frame 'cam0-f42' authorized (confidence=0.9, data_age_ms=30.0)
 # pose error   : dx=1.000000 dy=0.000000 dz=0.000000  droll=0.000000 dpitch=0.000000 dyaw=0.000000
-# velocity cmd : vx=1.000000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
+# velocity cmd : vx=0.250000 vy=0.000000 vz=0.000000  wroll=0.000000 wpitch=0.000000 wyaw=0.000000
 
 ./run.sh request --current "0,0,0,0,0,0" --target "1,0,0,0,0,0" \
   --frame-id cam0-f42 --confidence 0.9 --data-age-ms 30 --safety-state FAULT
@@ -159,7 +161,7 @@ safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
 CLI command; and a real HailoRT integration boundary (`hailo_runtime.py`)
-ready for a real Hailo-8 pose estimator the moment it plugs in. 115 tests
+ready for a real Hailo-8 pose estimator the moment it plugs in. 128 tests
 total.
 
 **Still ahead, and blocked on real hardware:** actually running 6-DOF

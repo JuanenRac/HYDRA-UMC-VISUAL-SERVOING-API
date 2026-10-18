@@ -81,3 +81,25 @@ def test_request_rejects_malformed_pose():
     result = run_cli("request", *_request_args(**{"--current": "not,a,pose"}))
     assert result.returncode == 1
     assert "error" in result.stderr
+
+
+def test_correct_with_a_zero_gain_is_an_error_message_not_a_traceback():
+    result = run_cli("correct", "--current", "0,0,0,0,0,0", "--target", "1,0,0,0,0,0", "--gain", "0")
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+    assert "gain" in result.stderr
+
+
+def test_request_with_a_zero_max_speed_is_an_error_message_not_a_traceback():
+    result = run_cli(
+        "request", "--current", "0,0,0,0,0,0", "--target", "1,0,0,0,0,0", "--frame-id", "f", "--confidence", "0.9",
+        "--data-age-ms", "10", "--safety-state", "READY", "--max-linear-speed", "0",
+    )
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+
+
+def test_the_commands_are_bounded_by_default():
+    result = run_cli("correct", "--current", "0,0,0,0,0,0", "--target", "10,0,0,0,0,0")
+    assert result.returncode == 0
+    assert "vx=0.250000" in result.stdout

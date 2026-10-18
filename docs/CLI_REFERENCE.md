@@ -240,6 +240,12 @@ to `127.0.0.1`, `PORT` to `8116`.
 $ hydra-umc-visual-servoing-api serve --addr 127.0.0.1 --port 8116
 ```
 
+The safety limits are options of `serve` and are fixed for the life of the
+process: `--min-confidence` (0.6), `--max-data-age-ms` (200), `--max-calibration-age-days`
+(not required), `--max-gain` (2), `--max-linear-speed` (0.25 m/s),
+`--max-angular-speed` (0.5 rad/s) and `--valid-for-ms` (250). A request may ask
+for something stricter in its own body; asking for something looser answers `400`.
+
 **`GET /stats`** — `{"role": "<the project's own role string>"}`, `200`.
 
 **`POST /correct`** — same fields as the CLI's `correct` flags, as JSON
@@ -250,7 +256,7 @@ optional):
 ```bash
 $ curl -X POST http://127.0.0.1:8116/correct \
     -d '{"current":"0,0,0,0,0,0","target":"0.1,0,0,0,0,0"}'
-{"error": {"dx": 0.1, "dy": 0.0, "dz": 0.0, "droll": 0.0, "dpitch": 0.0, "dyaw": 0.0}, "command": {"vx": 0.1, "vy": 0.0, "vz": 0.0, "wroll": 0.0, "wpitch": 0.0, "wyaw": 0.0}, "converged": false}
+{"error": {"dx": 0.1, "dy": 0.0, "dz": 0.0, "droll": 0.0, "dpitch": 0.0, "dyaw": 0.0}, "command": {"vx": 0.1, "vy": 0.0, "vz": 0.0, "wroll": 0.0, "wpitch": 0.0, "wyaw": 0.0, "hold": false, "issued_at_ms": 1700000000000, "valid_for_ms": 250.0, "seq": 1, "frame_id": null}, "converged": false}
 ```
 
 Always `200` for a real computed command; `400` for a missing/malformed
@@ -258,8 +264,13 @@ field (missing `current`/`target`, an unparseable pose string, or an
 out-of-range numeric field).
 
 **`POST /request`** — same fields as the CLI's `request` flags, as JSON;
-response body is `{"outcome", "reason", "error", "command"}` - `error`/
-`command` are `null` when `outcome` isn't `ACCEPTED`. Always `200` for a
+response body is `{"outcome", "reason", "error", "command", "converged"}`.
+`command` is never `null`: when `outcome` isn't `ACCEPTED`, or the pose has
+converged, it is an explicit zero command with `"hold": true`. Every command
+carries `issued_at_ms`, `valid_for_ms`, `seq` and `frame_id`, and **the consumer
+must stop when no newer valid command arrives within `valid_for_ms`**. The same
+`frame_id` cannot produce two accepted commands (the second is `REJECTED`).
+`error` is `null` when the request is refused before an error is computed. Always `200` for a
 well-formed request regardless of outcome (`ACCEPTED`/`REJECTED`/
 `INHIBITED` are real, correctly-computed decisions, not server errors -
 same reasoning as the CLI's own distinct exit codes below); `400` for a

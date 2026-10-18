@@ -21,13 +21,36 @@ for a genuinely malformed request body.
 from __future__ import annotations
 
 import json
+import math
+import threading
+import time
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-from .authorization import AuthorizationPolicy, VisualTargetRequest, authorize_correction
+from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
+from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
-from .servo import compute_pose_error, compute_velocity_command, is_converged
+from .servo import VelocityCommand, compute_pose_error, compute_velocity_command, is_converged
+
+ZERO_COMMAND = VelocityCommand(vx=0.0, vy=0.0, vz=0.0, wroll=0.0, wpitch=0.0, wyaw=0.0)
+REQUIRED = object()  # marks a field without a default: the request must carry it
+
+
+def _number(body: dict, key: str, default: object) -> float | None:
+    """`body[key]` as a float; a boolean or a non-number is an error, never converted."""
+    if key not in body:
+        if default is REQUIRED:
+            raise KeyError(key)
+        return default  # type: ignore[return-value]
+    value = body[key]
+    if value is None and default is not REQUIRED:
+        return default  # type: ignore[return-value]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{key} must be a number, got {value!r}")
+    if not math.isfinite(value):
+        raise ValueError(f"{key} must be finite, got {value!r}")
+    return float(value)
 
 
 def _write_json(handler: BaseHTTPRequestHandler, status: int, payload: object) -> None:
@@ -129,28 +152,83 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return current, target
 
+    def _effective_limits(self, body: dict) -> dict[str, float | None]:
+        """The limits for this request: the server's own, optionally tightened
+        by the caller. Asking for something looser than the server allows is an
+        error (400), never silently honoured and never silently ignored."""
+        limits = self.server.limits
+
+        def at_least(key: str, floor: float) -> float:
+            value = _number(body, key, floor)
+            if value < floor:
+                raise ValueError(f"{key} {value} is looser than this service's minimum {floor}")
+            return value
+
+        def at_most(key: str, ceiling: float, default: float | None = None) -> float:
+            value = _number(body, key, ceiling if default is None else default)
+            if value > ceiling:
+                raise ValueError(f"{key} {value} is looser than this service's maximum {ceiling}")
+            return value
+
+        calibration = _number(body, "max_calibration_age_days", None)
+        if limits.max_calibration_age_days is not None:
+            if calibration is None:
+                calibration = limits.max_calibration_age_days
+            elif calibration > limits.max_calibration_age_days:
+                raise ValueError(
+                    f"max_calibration_age_days {calibration} is looser than this service's maximum "
+                    f"{limits.max_calibration_age_days}"
+                )
+        return {
+            "min_confidence": at_least("min_confidence", limits.min_confidence),
+            "max_data_age_ms": at_most("max_data_age_ms", limits.max_data_age_ms),
+            "max_calibration_age_days": calibration,
+            "gain": at_most("gain", limits.max_gain, default=min(1.0, limits.max_gain)),
+            "max_linear_speed": at_most("max_linear_speed", limits.max_linear_speed),
+            "max_angular_speed": at_most("max_angular_speed", limits.max_angular_speed),
+        }
+
+    def _command_payload(self, command: VelocityCommand, frame_id: str | None, hold: bool) -> dict:
+        """A command always carries when it was issued, how long it is valid
+        and a sequence number: a consumer must stop when it does not receive a
+        newer valid command within `valid_for_ms`."""
+        payload = asdict(command)
+        payload.update({
+            "hold": hold,
+            "issued_at_ms": int(time.time() * 1000),
+            "valid_for_ms": self.server.limits.valid_for_ms,
+            "seq": self.server.next_sequence(),
+            "frame_id": frame_id,
+        })
+        return payload
+
     def _handle_correct(self, body: dict) -> None:
         poses = self._parse_poses(body)
         if poses is None:
             return
         current, target = poses
         try:
-            gain = float(body.get("gain", 1.0))
+            effective = self._effective_limits(body)
+            frame_id = body.get("frame_id")
+            if frame_id is not None and not isinstance(frame_id, str):
+                raise ValueError("frame_id must be a string")
             error = compute_pose_error(current, target)
             command = compute_velocity_command(
-                error, gain=gain,
-                max_linear_speed=body.get("max_linear_speed"),
-                max_angular_speed=body.get("max_angular_speed"),
+                error, gain=effective["gain"],
+                max_linear_speed=effective["max_linear_speed"],
+                max_angular_speed=effective["max_angular_speed"],
             )
             converged = is_converged(
                 error,
-                float(body.get("linear_tol", 0.001)),
-                float(body.get("angular_tol", 0.01)),
+                _number(body, "linear_tol", 0.001),
+                _number(body, "angular_tol", 0.01),
             )
         except (ValueError, TypeError) as e:
             _write_error(self, 400, str(e))
             return
-        _write_json(self, 200, {"error": asdict(error), "command": asdict(command), "converged": converged})
+        # Inside the tolerance there is nothing left to correct: command zero.
+        payload = self._command_payload(ZERO_COMMAND if converged else command, frame_id, hold=converged)
+        _write_json(self, 200, {"error": asdict(error), "command": payload, "converged": converged})
 
     def _handle_request(self, body: dict) -> None:
         poses = self._parse_poses(body)
@@ -158,36 +236,31 @@ class Handler(BaseHTTPRequestHandler):
             return
         current, target = poses
         try:
+            effective = self._effective_limits(body)
             request = VisualTargetRequest(
                 current=current,
                 target=target,
                 frame_id=str(body["frame_id"]),
-                confidence=float(body["confidence"]),
-                data_age_ms=float(body["data_age_ms"]),
+                confidence=_number(body, "confidence", REQUIRED),
+                data_age_ms=_number(body, "data_age_ms", REQUIRED),
                 safety_state=str(body["safety_state"]),
                 calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
-                calibration_age_days=(float(body["calibration_age_days"]) if body.get("calibration_age_days") is not None else None),
+                calibration_age_days=_number(body, "calibration_age_days", None),
             )
             policy = AuthorizationPolicy(
-                min_confidence=float(body.get("min_confidence", 0.6)),
-                max_data_age_ms=float(body.get("max_data_age_ms", 200.0)),
-                max_calibration_age_days=(
-                    float(body["max_calibration_age_days"]) if body.get("max_calibration_age_days") is not None else None
-                ),
+                min_confidence=effective["min_confidence"],
+                max_data_age_ms=effective["max_data_age_ms"],
+                max_calibration_age_days=effective["max_calibration_age_days"],
             )
-            # Same-request-body-parsing bug this file's own _handle_correct
-            # already avoided: these three MUST be parsed/used inside this
-            # try, not after it - a malformed (e.g. non-numeric) gain/
-            # max_linear_speed/max_angular_speed would otherwise raise past
-            # every except below, crashing the handler thread with an
-            # unhandled traceback and no HTTP response at all instead of a
-            # clean 400 (confirmed live: POST /request with gain: "bad"
-            # closed the connection with no response before this fix).
             decision = authorize_correction(
                 request, policy,
-                gain=float(body.get("gain", 1.0)),
-                max_linear_speed=body.get("max_linear_speed"),
-                max_angular_speed=body.get("max_angular_speed"),
+                gain=effective["gain"],
+                max_linear_speed=effective["max_linear_speed"],
+                max_angular_speed=effective["max_angular_speed"],
+            )
+            converged = (
+                decision.error is not None
+                and is_converged(decision.error, _number(body, "linear_tol", 0.001), _number(body, "angular_tol", 0.01))
             )
         except KeyError as e:
             _write_error(self, 400, f"missing required field: {e}")
@@ -195,15 +268,46 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError) as e:
             _write_error(self, 400, str(e))
             return
+
+        outcome, reason = decision.outcome, decision.reason
+        if outcome is RequestOutcome.ACCEPTED and not self.server.claim_frame(request.frame_id):
+            # the same visual frame must never be turned into a second command
+            outcome = RequestOutcome.REJECTED
+            reason = f"frame '{request.frame_id}' was already used for a correction"
+        accepted = outcome is RequestOutcome.ACCEPTED
+        if accepted and not converged and decision.command is not None:
+            command = self._command_payload(decision.command, request.frame_id, hold=False)
+        else:
+            # not authorised, or nothing left to correct: an explicit zero
+            # command, never "no command", so the consumer stops
+            command = self._command_payload(ZERO_COMMAND, request.frame_id, hold=True)
         _write_json(self, 200, {
-            "outcome": decision.outcome.value,
-            "reason": decision.reason,
+            "outcome": outcome.value,
+            "reason": reason,
             "error": asdict(decision.error) if decision.error is not None else None,
-            "command": asdict(decision.command) if decision.command is not None else None,
+            "command": command,
+            "converged": bool(converged) if accepted else False,
         })
 
 
 class VisualServoingServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int], role: str) -> None:
+    def __init__(self, address: tuple[str, int], role: str, limits: ServoLimits | None = None) -> None:
         super().__init__(address, Handler)
         self.role = role
+        self.limits = limits or ServoLimits()
+        self._state_lock = threading.Lock()
+        self._sequence = 0
+        self._last_frame_id: str | None = None
+
+    def next_sequence(self) -> int:
+        with self._state_lock:
+            self._sequence += 1
+            return self._sequence
+
+    def claim_frame(self, frame_id: str) -> bool:
+        """False when this frame already produced the previous accepted command."""
+        with self._state_lock:
+            if frame_id == self._last_frame_id:
+                return False
+            self._last_frame_id = frame_id
+            return True

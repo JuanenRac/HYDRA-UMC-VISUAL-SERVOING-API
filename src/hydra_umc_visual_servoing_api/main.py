@@ -26,6 +26,15 @@ from .authorization import (
     VisualTargetRequest,
     authorize_correction,
 )
+from .limits import (
+    DEFAULT_MAX_ANGULAR_SPEED,
+    DEFAULT_MAX_DATA_AGE_MS,
+    DEFAULT_MAX_GAIN,
+    DEFAULT_MAX_LINEAR_SPEED,
+    DEFAULT_MIN_CONFIDENCE,
+    DEFAULT_VALID_FOR_MS,
+    ServoLimits,
+)
 from .pose import Pose6D, PoseParseError
 from .servo import compute_pose_error, compute_velocity_command, is_converged
 
@@ -54,13 +63,17 @@ def _cmd_correct(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    error = compute_pose_error(current, target)
-    command = compute_velocity_command(
-        error, gain=args.gain,
-        max_linear_speed=args.max_linear_speed,
-        max_angular_speed=args.max_angular_speed,
-    )
-    converged = is_converged(error, args.linear_tol, args.angular_tol)
+    try:
+        error = compute_pose_error(current, target)
+        command = compute_velocity_command(
+            error, gain=args.gain,
+            max_linear_speed=args.max_linear_speed,
+            max_angular_speed=args.max_angular_speed,
+        )
+        converged = is_converged(error, args.linear_tol, args.angular_tol)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
     print(f"pose error   : dx={error.dx:.6f} dy={error.dy:.6f} dz={error.dz:.6f}  "
           f"droll={error.droll:.6f} dpitch={error.dpitch:.6f} dyaw={error.dyaw:.6f}")
@@ -96,11 +109,15 @@ def _cmd_request(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    decision = authorize_correction(
-        request, policy, gain=args.gain,
-        max_linear_speed=args.max_linear_speed,
-        max_angular_speed=args.max_angular_speed,
-    )
+    try:
+        decision = authorize_correction(
+            request, policy, gain=args.gain,
+            max_linear_speed=args.max_linear_speed,
+            max_angular_speed=args.max_angular_speed,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
     print(f"outcome : {decision.outcome.value.upper()} - {decision.reason}")
 
@@ -117,8 +134,27 @@ def _cmd_request(args: argparse.Namespace) -> int:
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
-    server = VisualServoingServer((args.addr, args.port), ROLE)
+    try:
+        limits = ServoLimits(
+            min_confidence=args.min_confidence,
+            max_data_age_ms=args.max_data_age_ms,
+            max_calibration_age_days=args.max_calibration_age_days,
+            max_gain=args.max_gain,
+            max_linear_speed=args.max_linear_speed,
+            max_angular_speed=args.max_angular_speed,
+            valid_for_ms=args.valid_for_ms,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    server = VisualServoingServer((args.addr, args.port), ROLE, limits)
     print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port}")
+    print(
+        f"[visual-servoing-api] limits fixed at start-up (a request can only tighten them): "
+        f"min_confidence={limits.min_confidence} max_data_age_ms={limits.max_data_age_ms} "
+        f"max_gain={limits.max_gain} max_linear_speed={limits.max_linear_speed} m/s "
+        f"max_angular_speed={limits.max_angular_speed} rad/s valid_for_ms={limits.valid_for_ms}"
+    )
     print("[visual-servoing-api] POST /correct, POST /request, GET /stats")
     try:
         server.serve_forever()
@@ -141,10 +177,10 @@ def _build_parser() -> argparse.ArgumentParser:
     correct.add_argument("--current", required=True, help="x,y,z,roll,pitch,yaw (meters, radians)")
     correct.add_argument("--target", required=True, help="x,y,z,roll,pitch,yaw (meters, radians)")
     correct.add_argument("--gain", type=float, default=1.0, help="Proportional control gain (default: 1.0)")
-    correct.add_argument("--max-linear-speed", type=float, default=None, dest="max_linear_speed",
-                          help="Clamp the linear velocity command's norm (m/s)")
-    correct.add_argument("--max-angular-speed", type=float, default=None, dest="max_angular_speed",
-                          help="Clamp the angular velocity command's norm (rad/s)")
+    correct.add_argument("--max-linear-speed", type=float, default=DEFAULT_MAX_LINEAR_SPEED, dest="max_linear_speed",
+                          help=f"Clamp the linear velocity command's norm in m/s (default: {DEFAULT_MAX_LINEAR_SPEED})")
+    correct.add_argument("--max-angular-speed", type=float, default=DEFAULT_MAX_ANGULAR_SPEED, dest="max_angular_speed",
+                          help=f"Clamp the angular velocity command's norm in rad/s (default: {DEFAULT_MAX_ANGULAR_SPEED})")
     correct.add_argument("--linear-tol", type=float, default=0.001, dest="linear_tol",
                           help="Linear convergence tolerance in meters (default: 0.001)")
     correct.add_argument("--angular-tol", type=float, default=0.01, dest="angular_tol",
@@ -173,10 +209,10 @@ def _build_parser() -> argparse.ArgumentParser:
     request.add_argument("--max-data-age-ms", type=float, default=200.0, dest="max_data_age_ms",
                           help="Maximum age in ms before the frame is considered stale (default: 200.0)")
     request.add_argument("--gain", type=float, default=1.0, help="Proportional control gain (default: 1.0)")
-    request.add_argument("--max-linear-speed", type=float, default=None, dest="max_linear_speed",
-                          help="Clamp the linear velocity command's norm (m/s)")
-    request.add_argument("--max-angular-speed", type=float, default=None, dest="max_angular_speed",
-                          help="Clamp the angular velocity command's norm (rad/s)")
+    request.add_argument("--max-linear-speed", type=float, default=DEFAULT_MAX_LINEAR_SPEED, dest="max_linear_speed",
+                          help=f"Clamp the linear velocity command's norm in m/s (default: {DEFAULT_MAX_LINEAR_SPEED})")
+    request.add_argument("--max-angular-speed", type=float, default=DEFAULT_MAX_ANGULAR_SPEED, dest="max_angular_speed",
+                          help=f"Clamp the angular velocity command's norm in rad/s (default: {DEFAULT_MAX_ANGULAR_SPEED})")
     request.set_defaults(func=_cmd_request)
 
     serve = subparsers.add_parser(
@@ -187,6 +223,20 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     serve.add_argument("--addr", default="127.0.0.1", help="address to bind the HTTP API to")
     serve.add_argument("--port", type=int, default=8116, help="port for the HTTP API")
+    serve.add_argument("--min-confidence", type=float, default=DEFAULT_MIN_CONFIDENCE, dest="min_confidence",
+                       help=f"Lowest detector confidence a request may be accepted with (default: {DEFAULT_MIN_CONFIDENCE})")
+    serve.add_argument("--max-data-age-ms", type=float, default=DEFAULT_MAX_DATA_AGE_MS, dest="max_data_age_ms",
+                       help=f"Oldest visual data a request may be accepted with, in ms (default: {DEFAULT_MAX_DATA_AGE_MS})")
+    serve.add_argument("--max-calibration-age-days", type=float, default=None, dest="max_calibration_age_days",
+                       help="Oldest calibration a request may be accepted with (default: not required)")
+    serve.add_argument("--max-gain", type=float, default=DEFAULT_MAX_GAIN, dest="max_gain",
+                       help=f"Highest control gain a request may ask for (default: {DEFAULT_MAX_GAIN})")
+    serve.add_argument("--max-linear-speed", type=float, default=DEFAULT_MAX_LINEAR_SPEED, dest="max_linear_speed",
+                       help=f"Highest linear speed any command may have, m/s (default: {DEFAULT_MAX_LINEAR_SPEED})")
+    serve.add_argument("--max-angular-speed", type=float, default=DEFAULT_MAX_ANGULAR_SPEED, dest="max_angular_speed",
+                       help=f"Highest angular speed any command may have, rad/s (default: {DEFAULT_MAX_ANGULAR_SPEED})")
+    serve.add_argument("--valid-for-ms", type=float, default=DEFAULT_VALID_FOR_MS, dest="valid_for_ms",
+                       help=f"How long a consumer may keep applying a command, ms (default: {DEFAULT_VALID_FOR_MS})")
     serve.set_defaults(func=_cmd_serve)
 
     return parser
