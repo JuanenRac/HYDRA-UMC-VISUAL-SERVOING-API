@@ -103,7 +103,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # バージョンを増やさないビルドチェック
 │   └── ci_validate.py   # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
 ├── pyproject.toml       # パッケージメタデータ、依存関係、オドメーターバージョン
-├── bump_version.py      # ネイティブバージョンのオドメーター式インクリメント（build.sh/.bat が実行）
+├── bump_version.py      # オドメーター式バージョンインクリメント（明示的な `bump` コマンドのみが実行）
 ├── bump_manifest_version.py # hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)
 ├── build.sh / build.bat # venv + editable インストール + コンパイルチェック + テスト
 ├── build-test.sh / build-test.bat # バージョンを増やさないビルドチェック
@@ -118,7 +118,7 @@ Python 3.10+ が必要です。
 
 ```bash
 # Linux / macOS
-./build.sh   # オドメーターバージョンを増加させ、.venv を作成し、
+./build.sh   # .venv を作成し、
              # パッケージを editable モード（dev エクストラ付き）で
              # インストールし、src/ 下の各ファイルをコンパイルチェックし、
              # 実際の pytest スイートを実行します
@@ -131,9 +131,7 @@ build.bat
 run.bat
 ```
 
-`build.sh`/`build.bat` は、実際の各ビルドの前に、エコシステム全体で
-統一された「オドメーター」規則（PATCH+1、9 を超えると MINOR に繰り上がる）
-を使用して本プロジェクト自身の `pyproject.toml` のバージョンを増加させ、
+`build.sh`/`build.bat` はバージョンを変更せず（上げるのは `python tools/hydra_project_tool.py bump` だけです）、
 その後 `python -m compileall` でソースをコンパイルチェックします。
 
 実際の例 —— 現在の姿勢から目標姿勢への補正を計算する：

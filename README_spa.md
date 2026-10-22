@@ -102,7 +102,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # Comprobación de compilación sin versionado
 │   └── ci_validate.py   # Validación de manifiesto/CHANGELOG/docs usada por CI
 ├── pyproject.toml       # Metadatos del paquete, dependencias, version cuentakilometros
-├── bump_version.py      # Bump de version nativa tipo cuentakilometros (build.sh/.bat)
+├── bump_version.py      # Incremento de versión tipo cuentakilómetros (solo lo ejecuta el comando `bump` explícito)
 ├── bump_manifest_version.py # Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)
 ├── build.sh / build.bat # venv + instalacion editable + compile-check + tests
 ├── build-test.sh / build-test.bat # Comprobación de compilación sin versionado
@@ -117,7 +117,7 @@ Requiere Python 3.10+.
 
 ```bash
 # Linux / macOS
-./build.sh   # bump de version cuentakilometros, crea .venv, instala el
+./build.sh   # crea .venv, instala el
              # paquete en modo editable (con extras dev), compile-check de
              # todo src/, y ejecuta la suite pytest real
 ./run.sh     # ejecuta el entry point desde .venv, imprime nombre + version + rol
@@ -129,9 +129,7 @@ build.bat
 run.bat
 ```
 
-`build.sh`/`build.bat` incrementan la version del propio `pyproject.toml`
-de este proyecto siguiendo la regla "cuentakilometros" del ecosistema
-(PATCH+1, con acarreo a MINOR al pasar de 9) antes de cada build real, y
+`build.sh`/`build.bat` nunca cambian la versión (solo `python tools/hydra_project_tool.py bump` la sube), y
 luego hacen compile-check del código fuente con `python -m compileall`.
 
 Ejemplo real - calcular la corrección de una pose actual a una objetivo:

@@ -102,7 +102,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # Verificação de compilação sem subir a versão (sem subida de versão/CHANGELOG)
 │   └── ci_validate.py   # Validação de manifesto/CHANGELOG/documentação usada pelo CI
 ├── pyproject.toml       # Metadados do pacote, dependências, versão ao estilo conta-quilómetros
-├── bump_version.py      # Subida de versão nativa ao estilo conta-quilómetros (executada pelo build.sh/.bat)
+├── bump_version.py      # Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
 ├── bump_manifest_version.py # Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
 ├── build.sh / build.bat # venv + instalação editável + verificação de compilação + testes
 ├── build-test.sh / build-test.bat # Verificação de compilação sem subir a versão (sem CHANGELOG/subida de versão)
@@ -117,7 +117,7 @@ Requer o Python 3.10+.
 
 ```bash
 # Linux / macOS
-./build.sh   # sobe a versão ao estilo conta-quilómetros, cria o .venv, instala o
+./build.sh   # cria o .venv, instala o
              # pacote em modo editável (com extras de desenvolvimento), verifica a compilação de cada
              # ficheiro em src/ e executa a suite pytest real
 ./run.sh     # executa o ponto de entrada a partir do .venv, imprime nome + versão + papel
@@ -129,9 +129,7 @@ build.bat
 run.bat
 ```
 
-O `build.sh`/`build.bat` sobe a versão do `pyproject.toml` deste projeto
-com a regra "conta-quilómetros" de todo o ecossistema (PATCH+1, transitando para o MINOR depois de
-9) antes de cada compilação real e depois verifica a compilação do código-fonte com
+`build.sh`/`build.bat` nunca altera a versão (só `python tools/hydra_project_tool.py bump` a sobe) e depois verifica a compilação do código-fonte com
 `python -m compileall`.
 
 Exemplo real - calcular a correção de uma pose atual para uma de destino:

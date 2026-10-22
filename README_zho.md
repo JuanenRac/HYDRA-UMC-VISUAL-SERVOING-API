@@ -102,7 +102,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # 不递增版本号的构建检查
 │   └── ci_validate.py   # CI 使用的清单/CHANGELOG/文档校验
 ├── pyproject.toml       # 包元数据、依赖项、里程表版本号
-├── bump_version.py      # 原生版本的里程表式递增（由 build.sh/.bat 运行）
+├── bump_version.py      # 里程表式版本递增（仅由显式 `bump` 命令运行）
 ├── bump_manifest_version.py # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)
 ├── build.sh / build.bat # venv + 可编辑安装 + 编译检查 + 测试
 ├── build-test.sh / build-test.bat # 不递增版本号的构建检查
@@ -117,7 +117,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 
 ```bash
 # Linux / macOS
-./build.sh   # 递增里程表版本号，创建 .venv，以可编辑模式（含 dev 附加项）
+./build.sh   # ，创建 .venv，以可编辑模式（含 dev 附加项）
              # 安装该包，对 src/ 下的每个文件进行编译检查，并运行真实的
              # pytest 套件
 ./run.sh     # 从 .venv 运行入口点，打印名称 + 版本 + 角色
@@ -129,9 +129,7 @@ build.bat
 run.bat
 ```
 
-`build.sh`/`build.bat` 会在每次真实构建之前，使用生态系统统一的"里程表"
-规则（PATCH+1，超过 9 时进位到 MINOR）递增本项目自身的 `pyproject.toml`
-版本号，然后使用 `python -m compileall` 对源代码进行编译检查。
+`build.sh`/`build.bat` 不会更改版本号（只有 `python tools/hydra_project_tool.py bump` 才会提升），然后使用 `python -m compileall` 对源代码进行编译检查。
 
 真实示例——计算从当前位姿到目标位姿的修正：
 

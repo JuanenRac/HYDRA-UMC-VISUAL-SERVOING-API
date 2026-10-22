@@ -103,7 +103,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # Nicht-versionierender Build-Check
 │   └── ci_validate.py   # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
 ├── pyproject.toml       # Paket-Metadaten, Abhängigkeiten, Kilometerzähler-Version
-├── bump_version.py      # Native Kilometerzähler-Versionserhöhung (build.sh/.bat)
+├── bump_version.py      # Versionserhöhung im Kilometerzähler-Stil (nur vom expliziten `bump`-Befehl ausgeführt)
 ├── bump_manifest_version.py # Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)
 ├── build.sh / build.bat # venv + editierbare Installation + Compile-Check + Tests
 ├── build-test.sh / build-test.bat # Nicht-versionierender Build-Check
@@ -118,7 +118,7 @@ Erfordert Python 3.10+.
 
 ```bash
 # Linux / macOS
-./build.sh   # erhöht die Kilometerzähler-Version, erstellt .venv, installiert
+./build.sh   # erstellt .venv, installiert
              # das Paket editierbar (mit dev-Extras), Compile-Check für
              # alles unter src/, und führt die echte pytest-Suite aus
 ./run.sh     # führt den Einstiegspunkt aus .venv aus, gibt Name + Version + Rolle aus
@@ -130,9 +130,7 @@ build.bat
 run.bat
 ```
 
-`build.sh`/`build.bat` erhöhen die Version in der eigenen `pyproject.toml`
-dieses Projekts nach der ökosystemweiten "Kilometerzähler"-Regel (PATCH+1,
-mit Übertrag auf MINOR nach 9) vor jedem echten Build und führen
+`build.sh`/`build.bat` ändern die Version nie (nur `python tools/hydra_project_tool.py bump` erhöht sie) und führen
 anschließend einen Compile-Check des Quellcodes mit `python -m compileall`
 durch.
 

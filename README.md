@@ -102,7 +102,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # Non-versioning build/compile check (no version/CHANGELOG bump)
 │   └── ci_validate.py   # Manifest/CHANGELOG/docs validation used by CI
 ├── pyproject.toml       # Package metadata, dependencies, odometer version
-├── bump_version.py      # Odometer-style native version bump (run by build.sh/.bat)
+├── bump_version.py      # Odometer-style version bump (run only by the explicit `bump` command)
 ├── bump_manifest_version.py # Syncs hydra-umc.project.json's version to the native one (--sync)
 ├── build.sh / build.bat # venv + editable install + compile-check + tests
 ├── build-test.sh / build-test.bat # Non-versioning build check (no CHANGELOG/version bump)
@@ -117,7 +117,7 @@ Requires Python 3.10+.
 
 ```bash
 # Linux / macOS
-./build.sh   # bumps the odometer version, creates .venv, installs the
+./build.sh   # creates .venv, installs the
              # package editable (with dev extras), compile-checks every
              # file under src/, and runs the real pytest suite
 ./run.sh     # runs the entry point from .venv, prints name + version + role
@@ -129,9 +129,7 @@ build.bat
 run.bat
 ```
 
-`build.sh`/`build.bat` bump this project's own `pyproject.toml` version
-using the ecosystem-wide "odometer" rule (PATCH+1, carrying into MINOR past
-9) before every real build, then compile-check the source with
+`build.sh`/`build.bat` never change the version (only `python tools/hydra_project_tool.py bump` raises it), then compile-check the source with
 `python -m compileall`.
 
 Real example - compute the correction from a current pose to a target one:

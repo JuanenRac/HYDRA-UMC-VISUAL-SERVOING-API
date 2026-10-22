@@ -103,7 +103,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   ├── build_test.py    # Vérification de build sans versionnage
 │   └── ci_validate.py   # Validation manifeste/CHANGELOG/docs utilisée par CI
 ├── pyproject.toml       # Métadonnées du paquet, dépendances, version compteur
-├── bump_version.py      # Incrément de version native type compteur (build.sh/.bat)
+├── bump_version.py      # Incrément de version type compteur kilométrique (exécuté seulement par la commande `bump` explicite)
 ├── bump_manifest_version.py # Synchronise la version de hydra-umc.project.json avec la version native (--sync)
 ├── build.sh / build.bat # venv + installation éditable + compile-check + tests
 ├── build-test.sh / build-test.bat # Vérification de build sans versionnage
@@ -118,7 +118,7 @@ Nécessite Python 3.10+.
 
 ```bash
 # Linux / macOS
-./build.sh   # incrémente la version compteur, crée .venv, installe le
+./build.sh   # crée .venv, installe le
              # paquet en mode éditable (avec les extras dev), compile-check
              # tout src/, et exécute la suite pytest réelle
 ./run.sh     # exécute le point d'entrée depuis .venv, affiche nom + version + rôle
