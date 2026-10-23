@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——134 个通过的测试（`pytest tests/`），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
+**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——142 个通过的测试（`pytest tests/`），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
 
 **谁来设定安全限制：** 限制（最低置信度、数据最大时效、最大增益、最大线速度和角速度、命令有效期）在服务启动时固定（`serve --max-linear-speed ...`，安全默认值：0.25 m/s、0.5 rad/s、增益 2）。请求只能收紧这些限制：要求更宽松的值会得到 `400`；`safety_state`、`confidence` 和 `data_age_ms` 仍由调用方自行声明，因此在连接机器人之前需要真实的 SAFETY-ZONES 数据源。每个响应都带有命令：被拒绝的请求或已收敛的位姿会得到 `"hold": true` 的明确零命令，以及 `issued_at_ms`、`valid_for_ms` 和 `seq`；**如果在 `valid_for_ms` 内没有收到更新的有效命令，消费方必须停止。** 同一个 `frame_id` 不能产生两条命令。尚未完成：角度误差是欧拉角之差（不是轴角误差），因此在俯仰角接近 90 度时不可靠；没有应用手眼标定，所以尚不区分 Eye-in-Hand 与 Eye-to-Hand；控制回路没有记忆（没有速率限制、滤波器或视觉丢失计时器）。
 
@@ -28,7 +28,7 @@
 |---|---|
 | 版本 | `0.1.9` |
 | 成熟度 | 可用 |
-| 测试 | 134 (`pytest tests/`) |
+| 测试 | 142 (`pytest tests/`) |
 | 技术栈 | Python / 6-DOF pose estimation |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -40,6 +40,7 @@
 它被设计为同时支持 **Eye-in-Hand**(相机装在工具上)和 **Eye-to-Hand**(固定相机)两种配置,作为抓取放置、SMD 对位和动态轨迹调整的基础(计划中:尚未用它修正过任何机器人)。
 
 ### 关键特性：
+* 🔑 **可选的 Bearer 令牌：** 在回环地址上 API 不需要令牌；在非回环地址上，没有令牌就拒绝启动（`--token-file` 或 `HYDRA_UMC_VISUAL_SERVOING_TOKEN`）。设置令牌后，每个请求都必须发送 `Authorization: Bearer <token>`（恒定时间比较）；只有清单声明的健康路径 `GET /stats` 保持开放。*(已实现)*
 * ✅ **真实 v0 —— PBVS 修正律：** `pose.py` + `servo.py` 计算当前位姿与目标位姿之间的位姿增量（角度按最短路径环绕，不走容易导致万向节死锁的长路），并将其转化为比例速度指令，限幅时不改变其方向。通过下面的 `correct` 子命令暴露——运行或测试都不需要摄像头或 NPU。
 * 🛡️ **真实 v0 —— 安全联锁授权：** `authorization.py` 拒绝将感知转化为运动，除非上游安全状态为 `READY` 且视觉数据足够新鲜/可信。通过下面的新 `request` 子命令暴露——运行或测试都不需要摄像头、NPU 或 SAFETY-ZONES 进程。
 * 🌐 **JSON/HTTP API（v0）：** 真实的 `serve` 子命令把同样的 `correct`/`request` 逻辑以 `POST /correct`/`POST /request`（以及 `GET /stats`）的形式对外提供，使用标准库的 `http.server`，无需额外依赖——可被真实调用方访问，而不再局限于一次性的命令行参数。详见 [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md)。
@@ -170,7 +171,7 @@ run.bat
 除非上游安全状态为 `READY` 且数据足够可信/新鲜，否则拒绝将视觉检测
 结果转化为运动，通过 `request` CLI 命令暴露;以及一个真实的 HailoRT 集成边界
 (`hailo_runtime.py`),已准备好在真实的 Hailo-8 姿态估计器接入的那一刻使用。
-共计 134 个测试。
+共计 142 个测试。
 
 **仍待完成，受限于真实硬件：** 要真正通过 `hailo_runtime.py` 运行 6 自由度
 位姿*估计*,需要一个真实编译好的姿态估计 `.hef`(目前尚未选定具体模型)

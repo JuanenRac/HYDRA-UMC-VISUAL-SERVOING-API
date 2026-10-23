@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Synchronisation-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Vérification d'honnêteté - ce qui fonctionne réellement aujourd'hui :** la loi de correction PBVS (`pose.py`, `servo.py`), la politique d'autorisation à porte de sécurité (`authorization.py`), l'API JSON/HTTP (`api.py`), et la frontière d'intégration HailoRT (`hailo_runtime.py`) sont réelles et testées - 134 tests qui passent (`pytest tests/`), y compris un vrai test d'intégration de bout en bout contre HYDRA-UMC-SAFETY-ZONES et un aller-retour réel contre un serveur `api.py` en direct, pas seulement des tests unitaires isolés. Rien de tout cela n'a besoin d'une caméra ou d'un NPU pour tourner ou être testé - `correct`/`request`/`serve` fonctionnent déjà aujourd'hui sur des poses synthétiques. La vraie estimation de pose 6-DOF à partir d'un flux caméra, le flux gRPC vers le cœur HYDRA-UMC, et l'exécution réelle de l'inférence via `hailo_runtime.py` restent du travail futur : cet environnement n'a ni module Hailo-8 physique ni `.hef` d'estimation de pose compilé, donc cette frontière d'intégration n'a jamais été exercée contre du vrai matériel. Voir `CHANGELOG.md` pour savoir exactement ce qui a été livré jusqu'à présent, et la propre liste de fonctionnalités de la section 1 ci-dessous pour le détail réel/futur par fonctionnalité.
+**Vérification d'honnêteté - ce qui fonctionne réellement aujourd'hui :** la loi de correction PBVS (`pose.py`, `servo.py`), la politique d'autorisation à porte de sécurité (`authorization.py`), l'API JSON/HTTP (`api.py`), et la frontière d'intégration HailoRT (`hailo_runtime.py`) sont réelles et testées - 142 tests qui passent (`pytest tests/`), y compris un vrai test d'intégration de bout en bout contre HYDRA-UMC-SAFETY-ZONES et un aller-retour réel contre un serveur `api.py` en direct, pas seulement des tests unitaires isolés. Rien de tout cela n'a besoin d'une caméra ou d'un NPU pour tourner ou être testé - `correct`/`request`/`serve` fonctionnent déjà aujourd'hui sur des poses synthétiques. La vraie estimation de pose 6-DOF à partir d'un flux caméra, le flux gRPC vers le cœur HYDRA-UMC, et l'exécution réelle de l'inférence via `hailo_runtime.py` restent du travail futur : cet environnement n'a ni module Hailo-8 physique ni `.hef` d'estimation de pose compilé, donc cette frontière d'intégration n'a jamais été exercée contre du vrai matériel. Voir `CHANGELOG.md` pour savoir exactement ce qui a été livré jusqu'à présent, et la propre liste de fonctionnalités de la section 1 ci-dessous pour le détail réel/futur par fonctionnalité.
 
 **Qui fixe les limites de sécurité :** les limites (confiance minimale, âge maximal des données, gain maximal, vitesses linéaire et angulaire maximales, validité de la commande) sont fixées au démarrage du service (`serve --max-linear-speed ...`, valeurs sûres par défaut : 0,25 m/s, 0,5 rad/s, gain 2). Une requête ne peut que les durcir : demander plus souple est un `400`, et `safety_state`, `confidence` et `data_age_ms` restent auto-déclarés par l'appelant, il faut donc un vrai flux SAFETY-ZONES avant de connecter un robot. Chaque réponse porte une commande : une requête refusée ou une pose convergée reçoit une commande nulle explicite avec `"hold": true`, ainsi que `issued_at_ms`, `valid_for_ms` et `seq` ; **le consommateur doit s'arrêter si aucune commande valide plus récente n'arrive dans `valid_for_ms`**. Le même `frame_id` ne peut pas produire deux commandes. Pas encore fait : l'erreur angulaire est la différence d'angles d'Euler (pas une erreur axe-angle), donc peu fiable près d'un tangage de 90 degrés ; aucune calibration main-œil n'est appliquée, Eye-in-Hand et Eye-to-Hand ne sont donc pas encore distingués ; la boucle n'a pas de mémoire (pas de limiteur de débit, de filtre ni de minuterie de perte de vision).
 
@@ -28,7 +28,7 @@
 |---|---|
 | Version | `0.1.9` |
 | Maturité | Fonctionnel |
-| Tests | 134 (`pytest tests/`) |
+| Tests | 142 (`pytest tests/`) |
 | Technologie | Python / 6-DOF pose estimation |
 | Cible | Le Raspberry Pi CM5 d'une cellule HYDRA-UMC |
 | Sur matériel réel | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
@@ -40,6 +40,7 @@
 Il est conçu pour prendre en charge les configurations **Eye-in-Hand** (caméra sur l'outil) comme **Eye-to-Hand** (caméra fixe), comme base pour le Pick-and-Place, l'alignement CMS et l'ajustement dynamique de trajectoire (prévu : aucun robot n'a été corrigé avec lui).
 
 ### Caractéristiques principales :
+* 🔑 **Jeton Bearer optionnel :** sur loopback l'API n'a pas besoin de jeton ; hors loopback elle refuse de démarrer sans (`--token-file` ou `HYDRA_UMC_VISUAL_SERVOING_TOKEN`). Avec un jeton configuré, chaque requête doit envoyer `Authorization: Bearer <token>` (comparaison en temps constant) ; seul `GET /stats`, le chemin de santé du manifeste, reste ouvert. *(implémenté)*
 * ✅ **Réel v0 - loi de correction PBVS :** `pose.py` + `servo.py` calculent le delta de pose entre une pose actuelle et une pose cible (enroulement angulaire par le plus court chemin, sans le long détour propice au blocage de cardan) et le transforment en commande de vitesse proportionnelle, plafonnée sans en déformer la direction. Exposé via la sous-commande `correct` ci-dessous - aucune caméra ni NPU nécessaire pour l'exécuter ou la tester.
 * 🛡️ **Réel v0 - autorisation à verrou de sécurité :** `authorization.py` refuse de transformer la perception en mouvement à moins que l'état de sécurité en amont soit `READY` et que les données visuelles soient assez fraîches/fiables. Exposé via la nouvelle sous-commande `request` ci-dessous - aucune caméra, NPU ou processus SAFETY-ZONES nécessaire pour l'exécuter ou la tester.
 * 🌐 **API JSON/HTTP (v0) :** la vraie sous-commande `serve` expose la même logique `correct`/`request` en tant que `POST /correct`/`POST /request` (plus `GET /stats`), via le `http.server` de la bibliothèque standard sans dépendance supplémentaire - accessible depuis un vrai appelant plutôt que via des arguments CLI ponctuels. Voir [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md).
@@ -176,7 +177,7 @@ CLI `correct` ; la politique d'autorisation à verrou de sécurité
 mouvement à moins que l'état de sécurité en amont soit `READY` et que les
 données soient assez fiables/fraîches, exposée via la commande CLI
 `request` ; et une véritable limite d'intégration HailoRT (`hailo_runtime.py`)
-prête pour un véritable estimateur de pose Hailo-8 dès qu'il sera branché. 134 tests au total.
+prête pour un véritable estimateur de pose Hailo-8 dès qu'il sera branché. 142 tests au total.
 
 **Encore à venir, et bloqué par du matériel réel :** exécuter réellement
 l'*estimation* de pose à 6 degrés de liberté via `hailo_runtime.py`

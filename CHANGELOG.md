@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Optional Bearer token for the HTTP API.** `serve --token-file FILE` (or `HYDRA_UMC_VISUAL_SERVOING_TOKEN`, at least 16 characters) makes every request carry `Authorization: Bearer <token>` (constant-time comparison); only `GET /stats`, the health path of the manifest, stays open. On loopback no token is needed; any other address is refused at start without one.
 - **A pose in a request may be a list or an object as well as the string**: `POST /correct` and `POST /request` take `current` and `target` as `"x,y,z,roll,pitch,yaw"`, as a list of six numbers in that order, or as an object with exactly the keys `x`, `y`, `z`, `roll`, `pitch` and `yaw` (`Pose6D.coerce`). Values must be numbers (not text, not booleans) and finite; a missing or unknown key is a `400` that names it. The string form and the command line are unchanged. 6 new tests (134 in all).
 - The manifest declares the health route of the service (`/stats`), so the service registry, the ecosystem status of the server and the watchdog know where to probe it.
 - Building no longer changes the version; raising it is the explicit `bump` command (`python tools/hydra_project_tool.py bump`). The build scripts only report the version they built, and CI fails if a build script runs a bump.

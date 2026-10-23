@@ -19,6 +19,7 @@ import argparse
 import sys
 from importlib.metadata import PackageNotFoundError, version
 
+from .access import bind_problem, load_token
 from .api import VisualServoingServer
 from .authorization import (
     AuthorizationPolicy,
@@ -147,8 +148,17 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    server = VisualServoingServer((args.addr, args.port), ROLE, limits)
-    print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port}")
+    try:
+        token = load_token(args.token_file)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    problem = bind_problem(args.addr, token)
+    if problem:
+        print(f"error: {problem}", file=sys.stderr)
+        return 2
+    server = VisualServoingServer((args.addr, args.port), ROLE, limits, token)
+    print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port} ({'Bearer token required' if token else 'no token, loopback only'})")
     print(
         f"[visual-servoing-api] limits fixed at start-up (a request can only tighten them): "
         f"min_confidence={limits.min_confidence} max_data_age_ms={limits.max_data_age_ms} "
@@ -223,6 +233,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     serve.add_argument("--addr", default="127.0.0.1", help="address to bind the HTTP API to")
     serve.add_argument("--port", type=int, default=8116, help="port for the HTTP API")
+    serve.add_argument("--token-file", default=None, help="file with the bearer token every request must present (or the HYDRA_UMC_VISUAL_SERVOING_TOKEN environment variable). Needed to bind an address that is not loopback.")
     serve.add_argument("--min-confidence", type=float, default=DEFAULT_MIN_CONFIDENCE, dest="min_confidence",
                        help=f"Lowest detector confidence a request may be accepted with (default: {DEFAULT_MIN_CONFIDENCE})")
     serve.add_argument("--max-data-age-ms", type=float, default=DEFAULT_MAX_DATA_AGE_MS, dest="max_data_age_ms",

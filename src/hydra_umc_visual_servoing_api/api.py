@@ -28,6 +28,7 @@ from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+from .access import authorized, reject
 from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
 from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
@@ -92,6 +93,10 @@ def _read_json_body(handler: BaseHTTPRequestHandler) -> dict:
     return json.loads(raw)
 
 
+# GET path the project manifest declares as the health probe; it carries no token
+HEALTH_PATH = "/stats"
+
+
 class Handler(BaseHTTPRequestHandler):
     server: "VisualServoingServer"
 
@@ -104,6 +109,10 @@ class Handler(BaseHTTPRequestHandler):
         pass  # quiet by default, same reasoning as this family's other api.py files
 
     def do_GET(self) -> None:  # noqa: N802
+        # the health path of the manifest stays open so the service registry can probe the service without the token
+        if urlparse(self.path).path != HEALTH_PATH and not authorized(self, self.server.token):
+            reject(self)
+            return
         path = urlparse(self.path).path
         if path == "/stats":
             _write_json(self, 200, {"role": self.server.role})
@@ -111,6 +120,9 @@ class Handler(BaseHTTPRequestHandler):
             _write_error(self, 404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
+        if not authorized(self, self.server.token):
+            reject(self)
+            return
         path = urlparse(self.path).path
         try:
             body = _read_json_body(self)
@@ -291,8 +303,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class VisualServoingServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int], role: str, limits: ServoLimits | None = None) -> None:
+    def __init__(self, address: tuple[str, int], role: str, limits: ServoLimits | None = None, token: str = "") -> None:
         super().__init__(address, Handler)
+        # empty means no token (loopback only; see access.py)
+        self.token = token
         self.role = role
         self.limits = limits or ServoLimits()
         self._state_lock = threading.Lock()
