@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Synchronisation-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Ehrlichkeitscheck - was heute wirklich funktioniert:** das PBVS-Korrekturgesetz (`pose.py`, `servo.py`), die sicherheitsgesteuerte Autorisierungsrichtlinie (`authorization.py`), die JSON/HTTP-API (`api.py`) und die HailoRT-Integrationsgrenze (`hailo_runtime.py`) sind real und getestet - 128 bestandene Tests (`pytest tests/`), einschließlich eines echten End-to-End-Integrationstests gegen HYDRA-UMC-SAFETY-ZONES und eines echten Round-Trips gegen einen laufenden `api.py`-Server, nicht nur isolierte Unit-Tests. Nichts davon braucht eine Kamera oder eine NPU, um zu laufen oder getestet zu werden - `correct`/`request`/`serve` funktionieren schon heute mit synthetischen Posen. Die echte 6-DOF-Posenschätzung aus einem Kamerabild, der gRPC-Feed zum HYDRA-UMC-Kern und die tatsächliche Ausführung der Inferenz über `hailo_runtime.py` bleiben Zukunftsarbeit: diese Umgebung hat weder ein physisches Hailo-8-Modul noch eine kompilierte Posenschätzungs-`.hef`, sodass diese Integrationsgrenze nie gegen echte Hardware getestet wurde. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde, und die eigene Feature-Liste in Abschnitt 1 weiter unten für die reale/zukünftige Aufschlüsselung pro Funktion.
+**Ehrlichkeitscheck - was heute wirklich funktioniert:** das PBVS-Korrekturgesetz (`pose.py`, `servo.py`), die sicherheitsgesteuerte Autorisierungsrichtlinie (`authorization.py`), die JSON/HTTP-API (`api.py`) und die HailoRT-Integrationsgrenze (`hailo_runtime.py`) sind real und getestet - 134 bestandene Tests (`pytest tests/`), einschließlich eines echten End-to-End-Integrationstests gegen HYDRA-UMC-SAFETY-ZONES und eines echten Round-Trips gegen einen laufenden `api.py`-Server, nicht nur isolierte Unit-Tests. Nichts davon braucht eine Kamera oder eine NPU, um zu laufen oder getestet zu werden - `correct`/`request`/`serve` funktionieren schon heute mit synthetischen Posen. Die echte 6-DOF-Posenschätzung aus einem Kamerabild, der gRPC-Feed zum HYDRA-UMC-Kern und die tatsächliche Ausführung der Inferenz über `hailo_runtime.py` bleiben Zukunftsarbeit: diese Umgebung hat weder ein physisches Hailo-8-Modul noch eine kompilierte Posenschätzungs-`.hef`, sodass diese Integrationsgrenze nie gegen echte Hardware getestet wurde. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde, und die eigene Feature-Liste in Abschnitt 1 weiter unten für die reale/zukünftige Aufschlüsselung pro Funktion.
 
 **Wer die Sicherheitsgrenzen festlegt:** Die Grenzen (Mindestkonfidenz, maximales Datenalter, maximale Verstärkung, maximale lineare und Winkelgeschwindigkeit, Gültigkeit des Befehls) werden beim Start des Dienstes festgelegt (`serve --max-linear-speed ...`, sichere Standardwerte: 0,25 m/s, 0,5 rad/s, Verstärkung 2). Eine Anfrage kann sie nur verschärfen: Etwas Lockereres zu verlangen ergibt `400`, und `safety_state`, `confidence` und `data_age_ms` werden weiterhin vom Aufrufer selbst angegeben, sodass vor dem Anschluss eines Roboters eine echte SAFETY-ZONES-Quelle nötig ist. Jede Antwort enthält einen Befehl: Eine abgelehnte Anfrage oder eine konvergierte Pose erhält einen ausdrücklichen Nullbefehl mit `"hold": true` sowie `issued_at_ms`, `valid_for_ms` und `seq`; **der Verbraucher muss anhalten, wenn innerhalb von `valid_for_ms` kein neuerer gültiger Befehl eintrifft**. Derselbe `frame_id` kann nicht zwei Befehle erzeugen. Noch offen: Der Winkelfehler ist die Differenz von Euler-Winkeln (kein Achse-Winkel-Fehler) und daher nahe einem Pitch von 90 Grad unzuverlässig; es wird keine Hand-Auge-Kalibrierung angewendet, Eye-in-Hand und Eye-to-Hand werden also noch nicht unterschieden; die Regelschleife hat kein Gedächtnis (keine Ratenbegrenzung, kein Filter, kein Timer für Sichtverlust).
 
@@ -28,7 +28,7 @@
 |---|---|
 | Version | `0.1.9` |
 | Reifegrad | Funktionsfähig |
-| Tests | 128 (`pytest tests/`) |
+| Tests | 134 (`pytest tests/`) |
 | Technik | Python / 6-DOF pose estimation |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -176,7 +176,7 @@ nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 `READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
 über den `request`-CLI-Befehl; sowie eine echte HailoRT-Integrationsgrenze
 (`hailo_runtime.py`), bereit für einen echten Hailo-8-Pose-Schätzer, sobald
-dieser angeschlossen wird. Insgesamt 128 Tests.
+dieser angeschlossen wird. Insgesamt 134 Tests.
 
 **Noch offen, blockiert durch echte Hardware:** die
 6-Freiheitsgrad-Posen-*schätzung* tatsächlich über `hailo_runtime.py`

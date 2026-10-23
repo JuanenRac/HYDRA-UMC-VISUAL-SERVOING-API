@@ -142,8 +142,8 @@ class Handler(BaseHTTPRequestHandler):
         and returns None on failure, same pattern as this family's other
         api.py files' _build_*_report helpers."""
         try:
-            current = Pose6D.parse(str(body["current"]))
-            target = Pose6D.parse(str(body["target"]))
+            current = Pose6D.coerce(body["current"])
+            target = Pose6D.coerce(body["target"])
         except KeyError as e:
             _write_error(self, 400, f"missing required field: {e}")
             return None

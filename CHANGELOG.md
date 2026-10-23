@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A pose in a request may be a list or an object as well as the string**: `POST /correct` and `POST /request` take `current` and `target` as `"x,y,z,roll,pitch,yaw"`, as a list of six numbers in that order, or as an object with exactly the keys `x`, `y`, `z`, `roll`, `pitch` and `yaw` (`Pose6D.coerce`). Values must be numbers (not text, not booleans) and finite; a missing or unknown key is a `400` that names it. The string form and the command line are unchanged. 6 new tests (134 in all).
 - The manifest declares the health route of the service (`/stats`), so the service registry, the ecosystem status of the server and the watchdog know where to probe it.
 - Building no longer changes the version; raising it is the explicit `bump` command (`python tools/hydra_project_tool.py bump`). The build scripts only report the version they built, and CI fails if a build script runs a bump.
 - The build and run scripts use the Python of the `.venv` directly instead of an activate script, and create the venv with the `py` launcher when there is one; CI fails if a script activates a venv.

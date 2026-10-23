@@ -362,3 +362,30 @@ def test_a_server_started_with_stricter_limits_enforces_them() -> None:
         assert body["outcome"] == "rejected"
         status, body = _post(f"{base}/request", _request_body(frame_id="g", confidence=0.99))
         assert body["command"]["vx"] == pytest.approx(0.05)
+
+
+def test_correct_accepts_poses_as_lists_and_objects_as_well_as_strings() -> None:
+    string = {"current": "0,0,0,0,0,0", "target": "0.1,0,0,0,0,0", "gain": 0.5, "dt": 0.1}
+    as_list = {**string, "current": [0, 0, 0, 0, 0, 0], "target": [0.1, 0, 0, 0, 0, 0]}
+    as_object = {
+        **string,
+        "current": {"x": 0, "y": 0, "z": 0, "roll": 0, "pitch": 0, "yaw": 0},
+        "target": {"x": 0.1, "y": 0, "z": 0, "roll": 0, "pitch": 0, "yaw": 0},
+    }
+    with running_server(GENEROUS) as base:
+        answers = [_post(f"{base}/correct", body) for body in (string, as_list, as_object)]
+    assert [status for status, _ in answers] == [200, 200, 200]
+    def same_control(answer: dict) -> dict:
+        # the command also carries the time it was issued and a sequence number
+        command = {k: v for k, v in answer["command"].items() if k not in ("issued_at_ms", "seq")}
+        return {"error": answer["error"], "command": command, "converged": answer["converged"]}
+
+    assert same_control(answers[0][1]) == same_control(answers[1][1]) == same_control(answers[2][1])
+
+
+def test_a_bad_pose_object_is_a_400_that_names_the_key() -> None:
+    body = {"current": {"x": 0, "y": 0, "z": 0, "roll": 0, "pitch": 0}, "target": "0,0,0,0,0,0", "gain": 0.5, "dt": 0.1}
+    with running_server(GENEROUS) as base:
+        status, answer = _post(f"{base}/correct", body)
+    assert status == 400
+    assert "yaw" in json.dumps(answer)

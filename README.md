@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Honesty check - what actually runs today:** the PBVS correction law (`pose.py`, `servo.py`), the safety-gated authorization policy (`authorization.py`), the JSON/HTTP API (`api.py`), and the HailoRT integration boundary (`hailo_runtime.py`) are real and tested - 128 passing tests (`pytest tests/`), including a real end-to-end integration test against HYDRA-UMC-SAFETY-ZONES and a live `api.py` server round-trip, not isolated unit tests alone. None of this needs a camera or an NPU to run or test - `correct`/`request`/`serve` all work today against synthetic poses. Real 6-DOF pose *estimation* from a camera feed, the gRPC feed to the HYDRA-UMC core, and actually running inference through `hailo_runtime.py` are still future work: this environment has no physical Hailo-8 module or compiled pose-estimation `.hef`, so that integration boundary has never been exercised against real hardware. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+**Honesty check - what actually runs today:** the PBVS correction law (`pose.py`, `servo.py`), the safety-gated authorization policy (`authorization.py`), the JSON/HTTP API (`api.py`), and the HailoRT integration boundary (`hailo_runtime.py`) are real and tested - 134 passing tests (`pytest tests/`), including a real end-to-end integration test against HYDRA-UMC-SAFETY-ZONES and a live `api.py` server round-trip, not isolated unit tests alone. None of this needs a camera or an NPU to run or test - `correct`/`request`/`serve` all work today against synthetic poses. Real 6-DOF pose *estimation* from a camera feed, the gRPC feed to the HYDRA-UMC core, and actually running inference through `hailo_runtime.py` are still future work: this environment has no physical Hailo-8 module or compiled pose-estimation `.hef`, so that integration boundary has never been exercised against real hardware. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
 
 **Who sets the safety limits:** the limits (minimum confidence, maximum data age, maximum gain, maximum linear and angular speed, command validity) are fixed when the service starts (`serve --max-linear-speed ...`, safe defaults: 0.25 m/s, 0.5 rad/s, gain 2). A request can only tighten them: asking for something looser is a `400`, and the caller's own `safety_state`, `confidence` and `data_age_ms` are still self-declared, so a real SAFETY-ZONES feed is needed before connecting a robot. Every answer carries a command: a refused request or a converged pose gets an explicit zero command with `"hold": true`, plus `issued_at_ms`, `valid_for_ms` and `seq`; **the consumer must stop when no newer valid command arrives within `valid_for_ms`**. The same `frame_id` cannot produce two commands. Not done yet: the angular error is the difference of Euler angles (not an axis-angle error), so it is unreliable near a pitch of 90 degrees; no hand-eye calibration is applied, so Eye-in-Hand and Eye-to-Hand are not distinguished yet; the control loop has no memory (no rate limit, filter or loss-of-vision timer).
 
@@ -28,7 +28,7 @@
 |---|---|
 | Version | `0.1.9` |
 | Maturity | Functional |
-| Tests | 128 (`pytest tests/`) |
+| Tests | 134 (`pytest tests/`) |
 | Stack | Python / 6-DOF pose estimation |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
@@ -172,7 +172,7 @@ safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
 CLI command; and a real HailoRT integration boundary (`hailo_runtime.py`)
-ready for a real Hailo-8 pose estimator the moment it plugs in. 128 tests
+ready for a real Hailo-8 pose estimator the moment it plugs in. 134 tests
 total.
 
 **Still ahead, and blocked on real hardware:** actually running 6-DOF
