@@ -286,6 +286,7 @@ Hailo-8 NPU が必要であり、結果として得られる速度指令の HYDR
 
 ## 📚 ドキュメント & コミュニティ
 
+- **[docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md)** — `correct`/`request`/`serve` のすべての呼び出し、インストール済み CLI の実行から取得した実際の出力、終了コード表、そして `POST /correct`/`POST /request`/`GET /stats` の HTTP JSON 契約。
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** —— プルリクエストのための技術スタックとコーディング指針。
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** —— このコミュニティで期待される行動規範。
 - **[SECURITY.md](SECURITY.md)** —— 脆弱性の報告方法と、このプロジェクトの実際のセキュリティ重点領域。
