@@ -389,3 +389,110 @@ def test_a_bad_pose_object_is_a_400_that_names_the_key() -> None:
         status, answer = _post(f"{base}/correct", body)
     assert status == 400
     assert "yaw" in json.dumps(answer)
+
+
+# ---- sessions (the loop with memory, see session.py) ----
+
+
+def _delete(url: str) -> tuple[int, dict]:
+    req = urllib.request.Request(url, method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read())
+
+
+SESSION_LIMITS = ServoLimits(max_gain=5.0, max_linear_speed=1.0, max_angular_speed=1.0)
+READY_REQUEST = {
+    "current": "0,0,0,0,0,0",
+    "target": "0.05,0,0,0,0,0",
+    "frame_id": "f-1",
+    "confidence": 0.95,
+    "data_age_ms": 20,
+    "safety_state": "READY",
+}
+
+
+def test_a_session_is_opened_stepped_and_closed() -> None:
+    with running_server(SESSION_LIMITS) as base:
+        status, opened = _post(f"{base}/sessions", {"gain": 1.0, "period_ms": 100})
+        assert status == 201
+        sid = opened["session_id"]
+        assert opened["config"]["period_s"] == 0.1 and opened["config"]["gain"] == 1.0
+        status, first = _post(f"{base}/sessions/{sid}/correct", {"current": "0,0,0,0,0,0", "target": "0.05,0,0,0,0,0", "frame_id": "a"})
+        assert status == 200
+        assert first["state"] == "restarted"
+        assert 0 < first["command"]["vx"] <= 0.05 + 1e-9, "starts from rest, limited by the acceleration"
+        assert first["command"]["valid_for_ms"] > 0 and first["command"]["seq"] >= 1 and first["command"]["hold"] is False
+        status, second = _post(f"{base}/sessions/{sid}/correct", {"current": "0.01,0,0,0,0,0", "target": "0.05,0,0,0,0,0"})
+        assert second["state"] == "tracking" and second["updates"] == 2
+        assert _delete(f"{base}/sessions/{sid}")[0] == 200
+        assert _post(f"{base}/sessions/{sid}/correct", {"current": "0,0,0,0,0,0", "target": "1,0,0,0,0,0"})[0] == 404
+        assert _delete(f"{base}/sessions/{sid}")[0] == 404
+
+
+def test_a_session_cannot_ask_for_more_than_the_service_allows_nor_for_a_loop_that_diverges() -> None:
+    with running_server(SESSION_LIMITS) as base:
+        assert _post(f"{base}/sessions", {"gain": 9.0})[0] == 400  # above the service's max_gain
+        assert _post(f"{base}/sessions", {"max_linear_speed": 5.0})[0] == 400
+        status, body = _post(f"{base}/sessions", {"gain": 5.0, "period_ms": 1000})  # K*T = 5
+        assert status == 400 and "K*T" in body["error"]
+        assert _post(f"{base}/sessions", {"gain": 5.0, "period_ms": 100, "max_gain_period": 5.0})[0] == 400  # a looser bound than the default is not a thing the caller moves
+        assert _post(f"{base}/sessions", {"filter_alpha": 0})[0] == 400
+        assert _post(f"{base}/sessions", {"period_ms": "fast"})[0] == 400
+
+
+def test_a_session_step_through_request_goes_through_the_safety_gate() -> None:
+    with running_server(SESSION_LIMITS) as base:
+        sid = _post(f"{base}/sessions", {})[1]["session_id"]
+        status, ok = _post(f"{base}/sessions/{sid}/request", READY_REQUEST)
+        assert status == 200 and ok["outcome"] == "accepted" and ok["state"] in ("restarted", "tracking")
+        assert ok["command"]["vx"] > 0
+        # the same frame twice is not a second correction
+        status, again = _post(f"{base}/sessions/{sid}/request", READY_REQUEST)
+        assert again["outcome"] == "rejected" and again["command"]["vx"] == 0.0 and again["state"] == "vision_lost"
+        # a stale detection, a low confidence and a safety state that is not READY each stop the loop with an explicit zero
+        for change in ({"data_age_ms": 5000}, {"confidence": 0.1}, {"safety_state": "FAULT"}):
+            status, body = _post(f"{base}/sessions/{sid}/request", {**READY_REQUEST, "frame_id": f"x-{len(change)}-{list(change)[0]}", **change})
+            assert status == 200
+            assert body["outcome"] in ("rejected", "inhibited"), change
+            assert body["command"]["vx"] == 0.0 and body["command"]["hold"] is True
+        # and after that the loop restarts from rest
+        status, back = _post(f"{base}/sessions/{sid}/request", {**READY_REQUEST, "frame_id": "after"})
+        assert back["outcome"] == "accepted" and back["state"] == "restarted"
+
+
+def test_vision_lost_gives_an_explicit_zero_command() -> None:
+    with running_server(SESSION_LIMITS) as base:
+        sid = _post(f"{base}/sessions", {})[1]["session_id"]
+        _post(f"{base}/sessions/{sid}/correct", {"current": "0,0,0,0,0,0", "target": "1,0,0,0,0,0"})
+        status, lost = _post(f"{base}/sessions/{sid}/vision-lost", {})
+        assert status == 200
+        assert lost["state"] == "vision_lost" and lost["command"]["vx"] == 0.0 and lost["command"]["hold"] is True
+        assert _post(f"{base}/sessions/{sid}/nonsense", {})[0] == 404
+
+
+def test_the_number_of_sessions_is_bounded() -> None:
+    from hydra_umc_visual_servoing_api.api import MAX_SESSIONS
+
+    with running_server(SESSION_LIMITS) as base:
+        ids = [_post(f"{base}/sessions", {})[1]["session_id"] for _ in range(MAX_SESSIONS)]
+        status, body = _post(f"{base}/sessions", {})
+        assert status == 429 and "close one" in body["error"]
+        _delete(f"{base}/sessions/{ids[0]}")
+        assert _post(f"{base}/sessions", {})[0] == 201
+
+
+def test_sessions_need_the_token_when_there_is_one() -> None:
+    server = VisualServoingServer(("127.0.0.1", 0), "test role", SESSION_LIMITS, token="0123456789abcdef")
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+        assert _post(f"{base}/sessions", {})[0] == 401
+        assert _delete(f"{base}/sessions/abc")[0] == 401
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

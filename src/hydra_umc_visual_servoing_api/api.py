@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import math
+import secrets
 import threading
 import time
 from dataclasses import asdict
@@ -33,6 +34,21 @@ from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequ
 from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
 from .servo import VelocityCommand, compute_pose_error, compute_velocity_command, is_converged
+from .session import (
+    DEFAULT_FILTER_ALPHA,
+    DEFAULT_HYSTERESIS,
+    DEFAULT_MAX_ANGULAR_ACCELERATION,
+    DEFAULT_MAX_GAIN_PERIOD,
+    DEFAULT_MAX_LINEAR_ACCELERATION,
+    DEFAULT_PERIOD_S,
+    DEFAULT_VISION_TIMEOUT_S,
+    ServoSession,
+    SessionConfig,
+)
+
+# Servoing sessions the service keeps at the same time, and how long one may sit unused before it is dropped.
+MAX_SESSIONS = 8
+SESSION_IDLE_SECONDS = 300.0
 
 ZERO_COMMAND = VelocityCommand(vx=0.0, vy=0.0, vz=0.0, wroll=0.0, wpitch=0.0, wyaw=0.0)
 REQUIRED = object()  # marks a field without a default: the request must carry it
@@ -52,6 +68,14 @@ def _number(body: dict, key: str, default: object) -> float | None:
     if not math.isfinite(value):
         raise ValueError(f"{key} must be finite, got {value!r}")
     return float(value)
+
+
+def _ceiling(body: dict, key: str, ceiling: float) -> float:
+    """`body[key]`, which may be smaller than `ceiling` and never larger."""
+    value = _number(body, key, ceiling)
+    if value > ceiling:
+        raise ValueError(f"{key} {value} is looser than this service's maximum {ceiling}")
+    return value
 
 
 def _write_json(handler: BaseHTTPRequestHandler, status: int, payload: object) -> None:
@@ -119,6 +143,19 @@ class Handler(BaseHTTPRequestHandler):
         else:
             _write_error(self, 404, "not found")
 
+    def do_DELETE(self) -> None:  # noqa: N802
+        if not authorized(self, self.server.token):
+            reject(self)
+            return
+        parts = urlparse(self.path).path.strip("/").split("/")
+        if len(parts) == 2 and parts[0] == "sessions":
+            if self.server.drop_session(parts[1]):
+                _write_json(self, 200, {"closed": parts[1]})
+            else:
+                _write_error(self, 404, "no such session")
+        else:
+            _write_error(self, 404, "not found")
+
     def do_POST(self) -> None:  # noqa: N802
         if not authorized(self, self.server.token):
             reject(self)
@@ -146,6 +183,11 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_correct(body)
         elif path == "/request":
             self._handle_request(body)
+        elif path == "/sessions":
+            self._handle_session_open(body)
+        elif path.startswith("/sessions/") and path.count("/") == 3:
+            _, _, session_id, action = path.split("/")
+            self._handle_session_step(session_id, action, body)
         else:
             _write_error(self, 404, "not found")
 
@@ -212,6 +254,117 @@ class Handler(BaseHTTPRequestHandler):
             "seq": self.server.next_sequence(),
             "frame_id": frame_id,
         })
+        return payload
+
+    # ---- sessions: the loop with memory (see session.py) ----
+
+    def _handle_session_open(self, body: dict) -> None:
+        try:
+            effective = self._effective_limits(body)
+            period = _number(body, "period_ms", DEFAULT_PERIOD_S * 1000.0) / 1000.0
+            config = SessionConfig(
+                gain=effective["gain"],
+                max_linear_speed=effective["max_linear_speed"],
+                max_angular_speed=effective["max_angular_speed"],
+                period_s=period,
+                max_gain_period=_ceiling(body, "max_gain_period", DEFAULT_MAX_GAIN_PERIOD),
+                filter_alpha=_number(body, "filter_alpha", DEFAULT_FILTER_ALPHA),
+                hysteresis=_number(body, "hysteresis", DEFAULT_HYSTERESIS),
+                vision_timeout_s=_number(body, "vision_timeout_ms", DEFAULT_VISION_TIMEOUT_S * 1000.0) / 1000.0,
+                max_linear_acceleration=_number(body, "max_linear_acceleration", DEFAULT_MAX_LINEAR_ACCELERATION),
+                max_angular_acceleration=_number(body, "max_angular_acceleration", DEFAULT_MAX_ANGULAR_ACCELERATION),
+                linear_tolerance=_number(body, "linear_tol", 0.001),
+                angular_tolerance=_number(body, "angular_tol", 0.01),
+            )
+        except (ValueError, TypeError) as e:
+            _write_error(self, 400, str(e))
+            return
+        session_id = self.server.open_session(config)
+        if session_id is None:
+            _write_error(self, 429, f"the service already keeps {MAX_SESSIONS} sessions in use: close one first")
+            return
+        _write_json(self, 201, {"session_id": session_id, "config": asdict(config)})
+
+    def _handle_session_step(self, session_id: str, action: str, body: dict) -> None:
+        session = self.server.get_session(session_id)
+        if session is None:
+            _write_error(self, 404, "no such session")
+            return
+        now = time.monotonic()
+        if action == "vision-lost":
+            with self.server.session_lock(session_id):
+                step = session.vision_lost(now)
+            _write_json(self, 200, self._session_payload(step, None, session))
+            return
+        if action not in ("correct", "request"):
+            _write_error(self, 404, "not found")
+            return
+        poses = self._parse_poses(body)
+        if poses is None:
+            return
+        current, target = poses
+        frame_id = body.get("frame_id")
+        try:
+            if frame_id is not None and not isinstance(frame_id, str):
+                raise ValueError("frame_id must be a string")
+            outcome_info = None
+            if action == "request":
+                effective = self._effective_limits(body)
+                request = VisualTargetRequest(
+                    current=current,
+                    target=target,
+                    frame_id=str(body["frame_id"]),
+                    confidence=_number(body, "confidence", REQUIRED),
+                    data_age_ms=_number(body, "data_age_ms", REQUIRED),
+                    safety_state=str(body["safety_state"]),
+                    calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
+                    calibration_age_days=_number(body, "calibration_age_days", None),
+                )
+                decision = authorize_correction(
+                    request,
+                    AuthorizationPolicy(
+                        min_confidence=effective["min_confidence"],
+                        max_data_age_ms=effective["max_data_age_ms"],
+                        max_calibration_age_days=effective["max_calibration_age_days"],
+                    ),
+                    gain=session.config.gain,
+                    max_linear_speed=session.config.max_linear_speed,
+                    max_angular_speed=session.config.max_angular_speed,
+                )
+                accepted = decision.outcome is RequestOutcome.ACCEPTED
+                reason = decision.reason
+                if accepted and not self.server.claim_frame(request.frame_id):
+                    accepted, reason = False, f"frame '{request.frame_id}' was already used for a correction"
+                # a decision that was acceptable but lost the claim on its frame is a rejection
+                final = RequestOutcome.ACCEPTED if accepted else (decision.outcome if decision.outcome is not RequestOutcome.ACCEPTED else RequestOutcome.REJECTED)
+                outcome_info = {"outcome": final.value, "reason": reason}
+                if not accepted:
+                    # a correction that is not authorised is a detection that cannot be used: the loop stops and restarts from rest
+                    with self.server.session_lock(session_id):
+                        step = session.vision_lost(now)
+                    _write_json(self, 200, self._session_payload(step, frame_id, session, outcome_info))
+                    return
+            with self.server.session_lock(session_id):
+                step = session.update(current, target, now)
+        except KeyError as e:
+            _write_error(self, 400, f"missing required field: {e}")
+            return
+        except (ValueError, TypeError) as e:
+            _write_error(self, 400, str(e))
+            return
+        _write_json(self, 200, self._session_payload(step, frame_id, session, outcome_info))
+
+    def _session_payload(self, step, frame_id, session: ServoSession, outcome_info: dict | None = None) -> dict:
+        payload = {
+            "state": step.state,
+            "converged": step.converged,
+            "error": asdict(step.error) if step.error is not None else None,
+            "filtered_pose": asdict(step.filtered) if step.filtered is not None else None,
+            "command": self._command_payload(step.command, frame_id, hold=step.state != "tracking" and step.state != "restarted"),
+            "updates": session.updates,
+        }
+        if outcome_info is not None:
+            payload.update(outcome_info)
         return payload
 
     def _handle_correct(self, body: dict) -> None:
@@ -312,6 +465,37 @@ class VisualServoingServer(ThreadingHTTPServer):
         self._state_lock = threading.Lock()
         self._sequence = 0
         self._last_frame_id: str | None = None
+        self._sessions: dict[str, tuple[ServoSession, threading.Lock, list[float]]] = {}
+
+    # ---- sessions ----
+    def open_session(self, config: SessionConfig) -> str | None:
+        """A new session id, or None when the limit is reached with every session still in use."""
+        now = time.monotonic()
+        with self._state_lock:
+            for stale in [sid for sid, (_, _, used) in self._sessions.items() if now - used[0] > SESSION_IDLE_SECONDS]:
+                del self._sessions[stale]
+            if len(self._sessions) >= MAX_SESSIONS:
+                return None
+            session_id = secrets.token_hex(8)
+            self._sessions[session_id] = (ServoSession(config), threading.Lock(), [now])
+            return session_id
+
+    def get_session(self, session_id: str) -> ServoSession | None:
+        with self._state_lock:
+            entry = self._sessions.get(session_id)
+            if entry is None:
+                return None
+            entry[2][0] = time.monotonic()
+            return entry[0]
+
+    def session_lock(self, session_id: str) -> threading.Lock:
+        with self._state_lock:
+            entry = self._sessions.get(session_id)
+            return entry[1] if entry is not None else threading.Lock()
+
+    def drop_session(self, session_id: str) -> bool:
+        with self._state_lock:
+            return self._sessions.pop(session_id, None) is not None
 
     def next_sequence(self) -> int:
         with self._state_lock:

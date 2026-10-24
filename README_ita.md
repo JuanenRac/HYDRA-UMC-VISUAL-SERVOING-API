@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Sincronizzazione-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
 </p>
 
-**Verifica di onestà - cosa funziona davvero oggi:** la legge di correzione PBVS (`pose.py`, `servo.py`), la politica di autorizzazione con cancello di sicurezza (`authorization.py`), l'API JSON/HTTP (`api.py`) e il confine di integrazione HailoRT (`hailo_runtime.py`) sono reali e testati - 142 test superati (`pytest tests/`), incluso un vero test di integrazione end-to-end contro HYDRA-UMC-SAFETY-ZONES e un round-trip reale contro un server `api.py` live, non solo test unitari isolati. Niente di tutto ciò richiede una fotocamera o un NPU per essere eseguito o testato - `correct`/`request`/`serve` funzionano già oggi su pose sintetiche. La vera stima di posa 6-DOF da un feed della fotocamera, il feed gRPC verso il core HYDRA-UMC, e l'effettiva esecuzione dell'inferenza tramite `hailo_runtime.py` restano lavoro futuro: questo ambiente non ha un modulo Hailo-8 fisico né un `.hef` di stima della posa compilato, quindi quel confine di integrazione non è mai stato esercitato contro hardware reale. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
+**Verifica di onestà - cosa funziona davvero oggi:** la legge di correzione PBVS (`pose.py`, `servo.py`), la politica di autorizzazione con cancello di sicurezza (`authorization.py`), l'API JSON/HTTP (`api.py`) e il confine di integrazione HailoRT (`hailo_runtime.py`) sono reali e testati - 172 test superati (`pytest tests/`) (5 dei quali sono test di integrazione che richiedono il repository fratello HYDRA-UMC-SAFETY-ZONES e vengono saltati senza), incluso un vero test di integrazione end-to-end contro HYDRA-UMC-SAFETY-ZONES e un round-trip reale contro un server `api.py` live, non solo test unitari isolati. Niente di tutto ciò richiede una fotocamera o un NPU per essere eseguito o testato - `correct`/`request`/`serve` funzionano già oggi su pose sintetiche. La vera stima di posa 6-DOF da un feed della fotocamera, il feed gRPC verso il core HYDRA-UMC, e l'effettiva esecuzione dell'inferenza tramite `hailo_runtime.py` restano lavoro futuro: questo ambiente non ha un modulo Hailo-8 fisico né un `.hef` di stima della posa compilato, quindi quel confine di integrazione non è mai stato esercitato contro hardware reale. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
 
 **Chi fissa i limiti di sicurezza:** i limiti (confidenza minima, età massima del dato, guadagno massimo, velocità lineare e angolare massime, validità del comando) sono fissati all'avvio del servizio (`serve --max-linear-speed ...`, valori sicuri predefiniti: 0,25 m/s, 0,5 rad/s, guadagno 2). Una richiesta può solo inasprirli: chiedere qualcosa di più permissivo è un `400`, e `safety_state`, `confidence` e `data_age_ms` restano autodichiarati dal chiamante, quindi serve un vero flusso SAFETY-ZONES prima di collegare un robot. Ogni risposta porta un comando: una richiesta rifiutata o una posa convergente riceve un comando zero esplicito con `"hold": true`, oltre a `issued_at_ms`, `valid_for_ms` e `seq`; **il consumatore deve fermarsi se non arriva un comando valido più recente entro `valid_for_ms`**. Lo stesso `frame_id` non può produrre due comandi. Non ancora fatto: l'errore angolare è la differenza di angoli di Eulero (non un errore asse-angolo), quindi inaffidabile vicino a un beccheggio di 90 gradi; non viene applicata alcuna calibrazione mano-occhio, quindi Eye-in-Hand ed Eye-to-Hand non sono ancora distinti; l'anello non ha memoria (nessun limitatore di variazione, filtro o timer di perdita di visione).
 
@@ -28,7 +28,7 @@
 |---|---|
 | Versione | `0.1.9` |
 | Maturità | Funzionale |
-| Test | 142 (`pytest tests/`) |
+| Test | 172 (`pytest tests/`) |
 | Tecnologia | Python / 6-DOF pose estimation |
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
@@ -44,6 +44,7 @@
 * ✅ **Reale v0 - legge di correzione PBVS:** `pose.py` + `servo.py` calcolano il delta di posa tra una posa attuale e una obiettivo (con avvolgimento angolare per il giro più breve, senza il lungo giro che favorisce il blocco cardanico) e lo trasformano in un comando di velocità proporzionale, limitato senza distorcerne la direzione. Esposto tramite il sottocomando `correct` più sotto - non serve telecamera né NPU per eseguirlo o testarlo.
 * 🛡️ **Reale v0 - autorizzazione con blocco di sicurezza:** `authorization.py` si rifiuta di trasformare la percezione in movimento a meno che lo stato di sicurezza a monte non sia `READY` e i dati visivi non siano abbastanza freschi/affidabili. Esposto tramite il nuovo sottocomando `request` più sotto - non servono telecamera, NPU o il processo SAFETY-ZONES per eseguirlo o testarlo.
 * 🌐 **API JSON/HTTP (v0):** il vero sottocomando `serve` espone la stessa logica `correct`/`request` come `POST /correct`/`POST /request` (più `GET /stats`), tramite l'`http.server` della libreria standard senza dipendenze extra - raggiungibile da un vero chiamante invece che da argomenti CLI singoli. Vedi [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md).
+* 🔁 **Sessioni di asservimento (il ciclo con memoria):** `POST /sessions` apre una sessione con un periodo nominale, un guadagno, un filtro sulla posa misurata, una banda morta con isteresi, limiti di accelerazione e un tempo massimo senza visione; `POST /sessions/<id>/correct` (o `/request`, che passa dalla stessa porta di sicurezza di `POST /request`) la fa avanzare di un passo, `POST /sessions/<id>/vision-lost` segnala una rilevazione persa e `DELETE /sessions/<id>` la chiude. Un guadagno il cui `K*T` supera 0,5 è rifiutato all'apertura (il ciclo è un integratore: serve `K*T` sotto 1 per convergere senza sovraelongazione e sotto 2 per convergere), una pausa più lunga del tempo massimo o un comando non autorizzato fa ripartire dal riposo il comando successivo, e una sessione può chiedere meno di quanto permettono i limiti del servizio, mai di più. Provato contro un impianto simulato con ritardo e rumore (`tests/test_session.py`); mai con un utensile reale.
 * 🔄 **Controllo a circuito chiuso:** Feedback continuo che bypassa l'orchestratore di alto livello per una bassa latenza. *(obiettivo architetturale - l'invio gRPC al core HYDRA-UMC resta lavoro futuro.)*
 * 📐 **Stima della posa:** Stima della posa dell'oggetto 6-DOF da viste a telecamera singola o multipla. *(lavoro futuro - richiede la vera NPU Hailo-8 che questo ambiente non ha ancora.)*
 * ⚡ **Accelerazione hardware:** Utilizza l'output di Hailo-8 per il calcolo istantaneo delle coordinate. *(lavoro futuro, stesso motivo.)*
@@ -89,6 +90,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   └── hydra_umc_visual_servoing_api/
 │       ├── pose.py           # Pose6D - posa a 6-DOF (x, y, z, roll, pitch, yaw)
 │       ├── servo.py          # Legge di correzione PBVS: errore di posa + comando di velocità
+│       ├── session.py        # Sessione di asservimento: periodo, filtro, banda morta, limite di accelerazione, tempo senza visione
 │       ├── authorization.py  # Policy con blocco di sicurezza (INHIBITED/REJECTED/ACCEPTED)
 │       ├── hailo_runtime.py  # Vero limite di integrazione HailoRT (hailo_platform) dello stimatore di posa, importato in modo lazy
 │       ├── api.py            # Superficie JSON/HTTP semplice (http.server di stdlib) su correct/request
@@ -177,7 +179,7 @@ visiva in movimento a meno che lo stato di sicurezza a monte non sia
 `READY` e i dati non siano abbastanza affidabili/freschi, esposta
 tramite il comando CLI `request`; e un vero limite di integrazione
 HailoRT (`hailo_runtime.py`) pronto per un vero stimatore di posa Hailo-8
-non appena viene collegato. 142 test in totale.
+non appena viene collegato. 172 test in totale.
 
 **Ancora da fare, bloccato da hardware reale:** eseguire davvero la
 *stima* di posa a 6 gradi di libertà tramite `hailo_runtime.py` richiede
