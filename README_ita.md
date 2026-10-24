@@ -33,6 +33,19 @@
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
 
+## 🚦 Stato del progetto
+
+Ogni riga è una parte di questo repository e il semaforo dice a che punto è oggi. È scritta in base a ciò che il repository può mostrare (test, compilazioni, esecuzioni), non a ciò che è previsto.
+
+🟢 Fatto e verificato · 🟡 Funziona, con limiti noti · 🟠 Fatto a metà o non ancora verificato · 🔴 Non fatto o non funzionante
+
+| Area | Stato | Cosa significa qui |
+|---|---|---|
+| Software | 🟡 | Funziona per il suo scopo principale; la verifica di onestà qui sopra elenca ciò che manca ancora |
+| Test | 🟢 | 128 test automatici, eseguiti a ogni modifica |
+| Hardware reale | 🔴 | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
+| Documentazione | 🟢 | README in otto lingue, verificato rispetto al manifesto a ogni modifica |
+
 ## 1. 🛠️ PANORAMICA TECNICA
 
 **HYDRA-UMC-VISUAL-SERVOING-API** è pensato per diventare il ponte di precisione tra percezione e movimento. Calcola il delta di errore tra una posa desiderata e la posa visiva di un oggetto che gli viene fornita, e restituisce una correzione subordinata ad autorizzazione; nessuna telecamera lo alimenta ancora e nulla invia correzioni al firmware.
