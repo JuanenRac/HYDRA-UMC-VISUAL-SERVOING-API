@@ -102,13 +102,16 @@ CM5 + Hailo-8 は市販のハードウェアであり独自の基板を持たな
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # ソースコード（hydra_umc_visual_servoing_api パッケージ）
 │   └── hydra_umc_visual_servoing_api/
+│       ├── __init__.py          # パッケージの説明とバージョン
 │       ├── pose.py           # Pose6D —— 6 自由度姿勢（x, y, z, roll, pitch, yaw）
 │       ├── servo.py          # PBVS 補正則：姿勢誤差 + 速度指令
 │       ├── session.py        # サーボセッション：周期、フィルタ、不感帯、加速度上限、視覚タイムアウト
 │       ├── authorization.py  # セーフティゲート付きポリシー（INHIBITED/REJECTED/ACCEPTED）
 │       ├── hailo_runtime.py  # 姿勢推定器の実際のHailoRT(hailo_platform)統合境界、遅延インポート
 │       ├── api.py            # シンプルなJSON/HTTPサーフェス(stdlibのhttp.server)。correct/requestを橋渡し
-│       └── main.py           # CLI エントリポイント（素の呼び出し + `correct` + `request`）
+│       ├── main.py           # CLI エントリポイント（素の呼び出し + `correct` + `request`）
+│       ├── access.py         # HTTP API 用の任意の Bearer トークン (ループバックでは不要、それ以外では必須)
+│       └── limits.py         # サービスが適用する上限 (起動時に固定。呼び出し側はより厳しくはできても緩くはできない)
 ├── tests/               # 実際の pytest スイート（pose、servo、authorization、hailo_runtime、api、CLI）
 ├── docs/                # ドキュメントと運動学理論
 ├── build/               # ビルド出力（ローカルの .venv もここに存在）
@@ -117,7 +120,10 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   └── hydra-umc-visual-servoing-api.service # ローカルCM5 PBVS補正APIのsystemdユニット
 ├── tools/
 │   ├── build_test.py    # バージョンを増やさないビルドチェック
-│   └── ci_validate.py   # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
+│   ├── ci_validate.py   # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
+│   ├── _doc_policy.py   # ファミリー共通のドキュメント規則 (HYDRA-UMC-SDK のコピーで、同期を維持)
+│   ├── _readme_parity.py # 8つの README が同じ構造であることの検査 (HYDRA-UMC-SDK のコピーで、同期を維持)
+│   └── hydra_project_tool.py # すべてのリポジトリで共通のコマンド: validate、test、ci、version、status、bump
 ├── pyproject.toml       # パッケージメタデータ、依存関係、オドメーターバージョン
 ├── bump_version.py      # オドメーター式バージョンインクリメント（明示的な `bump` コマンドのみが実行）
 ├── bump_manifest_version.py # hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)

@@ -102,13 +102,16 @@ projet ne comporte pas de dossier `hardware/` ni `firmware/`. `os/` et
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Code source (paquet hydra_umc_visual_servoing_api)
 │   └── hydra_umc_visual_servoing_api/
+│       ├── __init__.py          # Description et version du paquet
 │       ├── pose.py           # Pose6D - pose à 6-DOF (x, y, z, roll, pitch, yaw)
 │       ├── servo.py          # Loi de correction PBVS : erreur de pose + commande de vitesse
 │       ├── session.py        # Session d'asservissement : période, filtre, bande morte, limite d'accélération, délai de vision
 │       ├── authorization.py  # Politique à verrou de sécurité (INHIBITED/REJECTED/ACCEPTED)
 │       ├── hailo_runtime.py  # Véritable limite d'intégration HailoRT (hailo_platform) de l'estimateur de pose, importée paresseusement
 │       ├── api.py            # Surface JSON/HTTP simple (http.server de stdlib) sur correct/request
-│       └── main.py           # Point d'entrée CLI (invocation nue + `correct` + `request`)
+│       ├── main.py           # Point d'entrée CLI (invocation nue + `correct` + `request`)
+│       ├── access.py         # Jeton Bearer facultatif pour l'API HTTP (inutile en boucle locale, obligatoire en dehors)
+│       └── limits.py         # Les limites appliquées par le service, fixées au démarrage (un appelant peut en demander de plus strictes, jamais de plus lâches)
 ├── tests/               # Suite pytest réelle (pose, servo, authorization, hailo_runtime, api, CLI)
 ├── docs/                # Documentation et théorie cinématique
 ├── build/               # Sortie de build (le .venv local y vit aussi)
@@ -117,7 +120,10 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   └── hydra-umc-visual-servoing-api.service # Unité systemd de l'API locale de correction PBVS sur la CM5
 ├── tools/
 │   ├── build_test.py    # Vérification de build sans versionnage
-│   └── ci_validate.py   # Validation manifeste/CHANGELOG/docs utilisée par CI
+│   ├── ci_validate.py   # Validation manifeste/CHANGELOG/docs utilisée par CI
+│   ├── _doc_policy.py   # Règles de documentation partagées par la famille (copie de celle de HYDRA-UMC-SDK, tenue synchronisée)
+│   ├── _readme_parity.py # Contrôle que les huit README partagent la même structure (copie de celui de HYDRA-UMC-SDK, tenue synchronisée)
+│   └── hydra_project_tool.py # Les mêmes commandes dans chaque dépôt : validate, test, ci, version, status, bump
 ├── pyproject.toml       # Métadonnées du paquet, dépendances, version compteur
 ├── bump_version.py      # Incrément de version type compteur kilométrique (exécuté seulement par la commande `bump` explicite)
 ├── bump_manifest_version.py # Synchronise la version de hydra-umc.project.json avec la version native (--sync)

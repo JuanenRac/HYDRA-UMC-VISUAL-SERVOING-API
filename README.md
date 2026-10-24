@@ -101,13 +101,16 @@ live only in the integration parent, `HYDRA-UMC-VISION-NODE`.
 HYDRA-UMC-VISUAL-SERVOING-API/
 ├── src/                 # Source code (hydra_umc_visual_servoing_api package)
 │   └── hydra_umc_visual_servoing_api/
+│       ├── __init__.py          # Package description and version
 │       ├── pose.py           # Pose6D - 6-DOF pose (x, y, z, roll, pitch, yaw)
 │       ├── servo.py          # PBVS pose-error + velocity-command correction law
 │       ├── session.py        # Servoing session: period, filter, dead band, acceleration limit, vision timeout
 │       ├── authorization.py  # Safety-gated request policy (INHIBITED/REJECTED/ACCEPTED)
 │       ├── hailo_runtime.py  # Real HailoRT (hailo_platform) pose-estimator integration boundary, lazily imported
 │       ├── api.py            # Plain JSON/HTTP surface (stdlib http.server) over correct/request
-│       └── main.py           # CLI entry point (bare invocation + `correct` + `request`)
+│       ├── main.py           # CLI entry point (bare invocation + `correct` + `request`)
+│       ├── access.py         # Optional Bearer token for the HTTP API (none needed on loopback, mandatory away from it)
+│       └── limits.py         # The limits the service enforces, fixed at start-up (a caller may ask for stricter, never looser)
 ├── tests/               # Real pytest suite (pose, servo, authorization, hailo_runtime, api, CLI)
 ├── docs/                # Documentation and kinematic theory
 ├── build/               # Build output (local .venv lives here too)
@@ -116,7 +119,10 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 │   └── hydra-umc-visual-servoing-api.service # Local CM5 PBVS correction API systemd unit
 ├── tools/
 │   ├── build_test.py    # Non-versioning build/compile check (no version/CHANGELOG bump)
-│   └── ci_validate.py   # Manifest/CHANGELOG/docs validation used by CI
+│   ├── ci_validate.py   # Manifest/CHANGELOG/docs validation used by CI
+│   ├── _doc_policy.py   # Documentation rules shared by the family (a copy of HYDRA-UMC-SDK's, kept in sync)
+│   ├── _readme_parity.py # Check that the eight READMEs share one structure (a copy of HYDRA-UMC-SDK's, kept in sync)
+│   └── hydra_project_tool.py # The same commands in every repository: validate, test, ci, version, status, bump
 ├── pyproject.toml       # Package metadata, dependencies, odometer version
 ├── bump_version.py      # Odometer-style version bump (run only by the explicit `bump` command)
 ├── bump_manifest_version.py # Syncs hydra-umc.project.json's version to the native one (--sync)
