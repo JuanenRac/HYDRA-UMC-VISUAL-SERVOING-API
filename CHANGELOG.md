@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [0.2.0] - A servoing loop with memory and optional Bearer token for the HTTP API
 
 - **A servoing loop with memory.** `session.py`: a session has a nominal period and a gain checked against it (`K*T` above 0.5 is refused: above 1 the loop overshoots, above 2 it diverges), a filter on the measured pose (angles along the shortest turn), a dead band with hysteresis, limits on acceleration, and a vision timeout after which the command is zero and the next one starts from rest. `POST /sessions`, `POST /sessions/<id>/correct`, `POST /sessions/<id>/request` (through the same safety gate as `POST /request`, with an explicit zero when it refuses), `POST /sessions/<id>/vision-lost` and `DELETE /sessions/<id>` (at most 8 sessions, idle ones dropped after five minutes); a session may ask for less than the service's limits allow, never more. Tested in closed loop against a simulated integrator with delay and noise: convergence without overshoot at the default gain with up to two periods of delay, no chatter at the edge of the tolerance, acceleration limit respected, loss of detection gives zero. The README says that 5 of the tests need the sibling SAFETY-ZONES checkout and are skipped without it.
 - **Optional Bearer token for the HTTP API.** `serve --token-file FILE` (or `HYDRA_UMC_VISUAL_SERVOING_TOKEN`, at least 16 characters) makes every request carry `Authorization: Bearer <token>` (constant-time comparison); only `GET /stats`, the health path of the manifest, stays open. On loopback no token is needed; any other address is refused at start without one.

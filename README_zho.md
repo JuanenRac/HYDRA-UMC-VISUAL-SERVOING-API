@@ -26,9 +26,9 @@
 
 | | |
 |---|---|
-| 版本 | `0.1.9` |
+| 版本 | `0.2.0` |
 | 成熟度 | 可用 |
-| 测试 | 172 (`pytest tests/`) |
+| 测试 | 128 (`pytest tests/`) |
 | 技术栈 | Python / 6-DOF pose estimation |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |

@@ -26,9 +26,9 @@
 
 | | |
 |---|---|
-| Version | `0.1.9` |
+| Version | `0.2.0` |
 | Maturity | Functional |
-| Tests | 172 (`pytest tests/`) |
+| Tests | 128 (`pytest tests/`) |
 | Stack | Python / 6-DOF pose estimation |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
