@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **`ServoController`, a servoing session with state:** wraps the proportional law with a gain checked against the period (gain x period at most 0.5 by default), an exponential filter on the pose error, a dead band with hysteresis, a limit on how fast the command may change (linear and angular), and a vision-loss timeout that forces a zero command. The clock is passed in, so every step is testable; a non-finite error or a clock that goes back also forces zero. It is a library class; the HTTP routes keep answering the stateless command until a session route is added.
 - **The notes of the project manifest no longer carry a hand-written test count:** the counts went out of date at every change; the number of tests is stated by the README, which is checked against the code.
 - **README in the universal layout:** the README and its seven translations follow the layout that the four families share (22 sections in a fixed order), with an architecture picture and a repository-structure picture drawn from `docs/architecture.json` and `docs/structure.json`; the CI validator checks both pictures and the file tree.
 
