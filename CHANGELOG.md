@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **README in the universal layout:** the README and its seven translations follow the layout that the four families share (22 sections in a fixed order), with an architecture picture and a repository-structure picture drawn from `docs/architecture.json` and `docs/structure.json`; the CI validator checks both pictures and the file tree.
+
 - **The layout of the README is checked in the CI:** the validator runs `tools/universal_readme_check.py` and lists, as a warning, what differs from the universal layout of the README.
 
 ## [0.2.0] - A servoing loop with memory and optional Bearer token for the HTTP API
@@ -309,7 +311,7 @@ command).
 - 15 tests (`test_pose.py`, `test_servo.py`, `test_cli.py`).
 - `pyproject.toml` - added a `dev` extra (`pytest`).
 - `build.sh`/`build.bat` - fixed the version-bump step ordering (the
-  manifest sync must run after, not before, the odometer bump, or the
+  manifest sync must run after, not before, the version bump, or the
   manifest ends up one version behind), added the real test-suite step,
   and the no-autoclose-on-double-click behavior common to the rest of
   the ecosystem's scripts.
@@ -327,6 +329,6 @@ command).
   and the low-latency feed towards the HYDRA-UMC core land in a later
   pass.
 - **`pyproject.toml`** - packaging metadata, no runtime dependencies yet.
-- **`bump_version.py`** - ecosystem-standard odometer bump script.
+- **`bump_version.py`** - ecosystem-standard version bump script.
 - **`build.sh` / `build.bat`**, **`run.sh` / `run.bat`** - venv creation,
   editable install, compile-check, and entry-point execution.

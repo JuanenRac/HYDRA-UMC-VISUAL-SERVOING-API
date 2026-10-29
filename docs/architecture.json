@@ -1,0 +1,171 @@
+{
+  "repo": "HYDRA-UMC-VISUAL-SERVOING-API",
+  "ecosystem": "hydra",
+  "tagline": "A position-based correction law behind a gate: stale data, low confidence or an unsafe state never produce motion.",
+  "description": "HYDRA-UMC-VISUAL-SERVOING-API computes a bounded velocity command from a pose error, remembers the loop in a session, and authorises each request against data age, confidence and the safety state under limits fixed at start.",
+  "columns": [
+    "WHO CALLS IT",
+    "THIS REPOSITORY",
+    "WHERE POSES COME FROM"
+  ],
+  "nodes": [
+    {
+      "id": "cli",
+      "column": 0,
+      "level": "tested",
+      "title": "CLI",
+      "lines": [
+        "correct, request, serve"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/main.py"
+      ]
+    },
+    {
+      "id": "http",
+      "column": 0,
+      "level": "tested",
+      "title": "HTTP API",
+      "lines": [
+        "token away from",
+        "loopback"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/api.py",
+        "src/hydra_umc_visual_servoing_api/access.py"
+      ]
+    },
+    {
+      "id": "zon",
+      "column": 2,
+      "level": "contract",
+      "title": "SAFETY-ZONES",
+      "lines": [
+        "gives the safety state",
+        "(tested together)"
+      ]
+    },
+    {
+      "id": "est",
+      "column": 2,
+      "level": "untested",
+      "title": "Hailo-8 pose estimator",
+      "lines": [
+        "hailo_runtime.py boundary;",
+        "no camera was used"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/hailo_runtime.py"
+      ]
+    },
+    {
+      "id": "pos",
+      "column": 1,
+      "level": "tested",
+      "title": "pose.py",
+      "lines": [
+        "6-DOF pose: x, y, z,",
+        "roll, pitch, yaw"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/pose.py"
+      ]
+    },
+    {
+      "id": "srv",
+      "column": 1,
+      "level": "tested",
+      "title": "servo.py",
+      "lines": [
+        "proportional law with",
+        "speed limits"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/servo.py"
+      ]
+    },
+    {
+      "id": "aut",
+      "column": 1,
+      "level": "tested",
+      "title": "authorization.py",
+      "lines": [
+        "data age, confidence",
+        "and safety state"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/authorization.py"
+      ]
+    },
+    {
+      "id": "ses",
+      "column": 1,
+      "level": "tested",
+      "title": "session.py",
+      "lines": [
+        "the loop: period, gain",
+        "and history"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/session.py"
+      ]
+    },
+    {
+      "id": "lim",
+      "column": 1,
+      "level": "tested",
+      "title": "limits.py",
+      "lines": [
+        "fixed at start; a caller",
+        "may only be stricter"
+      ],
+      "code": [
+        "src/hydra_umc_visual_servoing_api/limits.py"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "cli",
+      "to": "pos",
+      "level": "tested"
+    },
+    {
+      "from": "http",
+      "to": "pos",
+      "level": "tested"
+    },
+    {
+      "from": "pos",
+      "to": "srv",
+      "level": "tested"
+    },
+    {
+      "from": "srv",
+      "to": "ses",
+      "level": "tested"
+    },
+    {
+      "from": "lim",
+      "to": "aut",
+      "level": "tested"
+    },
+    {
+      "from": "aut",
+      "to": "ses",
+      "level": "tested"
+    },
+    {
+      "from": "zon",
+      "to": "aut",
+      "level": "contract",
+      "label": "safety state"
+    },
+    {
+      "from": "est",
+      "to": "pos",
+      "level": "untested"
+    }
+  ],
+  "footer": "The law and the gate were tried with numbers and the HTTP API; no camera, no robot and no Hailo-8."
+}

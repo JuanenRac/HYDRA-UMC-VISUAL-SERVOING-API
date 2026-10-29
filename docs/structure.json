@@ -1,0 +1,512 @@
+{
+  "repo": "HYDRA-UMC-VISUAL-SERVOING-API",
+  "ecosystem": "hydra",
+  "svg": "en",
+  "exempt": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "LICENSE",
+    "LICENSE.md",
+    "test.bat"
+  ],
+  "cards": [
+    {
+      "name": "tools/",
+      "span": 3,
+      "accent": "a",
+      "rows": [
+        {
+          "name": "build_test.py",
+          "desc": {
+            "en": "Non-versioning build/compile check",
+            "es": "Comprobación de compilación sin versionado",
+            "de": "Nicht-versionierender Build-Check",
+            "fr": "Vérification de build sans versionnage",
+            "it": "Controllo build senza versionamento",
+            "ja": "バージョンを増やさないビルドチェック",
+            "zh": "不递增版本号的构建检查",
+            "pt": "Verificação de compilação sem subir a versão"
+          },
+          "tree_desc": {
+            "en": "Non-versioning build/compile check (no version/CHANGELOG bump)",
+            "es": "Comprobación de compilación sin versionado",
+            "de": "Nicht-versionierender Build-Check",
+            "fr": "Vérification de build sans versionnage",
+            "it": "Controllo build senza versionamento",
+            "ja": "バージョンを増やさないビルドチェック",
+            "zh": "不递增版本号的构建检查",
+            "pt": "Verificação de compilação sem subir a versão (sem subida de versão/CHANGELOG)"
+          }
+        },
+        {
+          "name": "ci_validate.py",
+          "desc": {
+            "en": "Manifest/CHANGELOG/docs validation used",
+            "es": "Validación de manifiesto/CHANGELOG/docs",
+            "de": "Manifest/CHANGELOG/Docs-Validierung",
+            "fr": "Validation manifeste/CHANGELOG/docs",
+            "it": "Validazione manifest/CHANGELOG/docs usata",
+            "ja": "CI が使用するマニフェスト/CHANGEL",
+            "zh": "CI 使用的清单/CHANGELOG/文档校",
+            "pt": "Validação de"
+          },
+          "tree_desc": {
+            "en": "Manifest/CHANGELOG/docs validation used by CI",
+            "es": "Validación de manifiesto/CHANGELOG/docs usada por CI",
+            "de": "Manifest/CHANGELOG/Docs-Validierung, von CI genutzt",
+            "fr": "Validation manifeste/CHANGELOG/docs utilisée par CI",
+            "it": "Validazione manifest/CHANGELOG/docs usata dalla CI",
+            "ja": "CI が使用するマニフェスト/CHANGELOG/ドキュメント検証",
+            "zh": "CI 使用的清单/CHANGELOG/文档校验",
+            "pt": "Validação de manifesto/CHANGELOG/documentação usada pelo CI"
+          }
+        },
+        {
+          "name": "_doc_policy.py",
+          "desc": {
+            "en": "Documentation rules shared by the family",
+            "es": "Reglas de documentación compartidas por la",
+            "de": "Von der Familie geteilte",
+            "fr": "Règles de documentation partagées par la",
+            "it": "Regole di documentazione condivise dalla",
+            "ja": "ファミリー共通のドキュメント規則",
+            "zh": "家族共享的文档规则 (HYDRA-UMC-S",
+            "pt": "Regras de documentação partilhadas pela"
+          },
+          "tree_desc": {
+            "en": "Documentation rules shared by the family (a copy of HYDRA-UMC-SDK's, kept in sync)",
+            "es": "Reglas de documentación compartidas por la familia (copia de la de HYDRA-UMC-SDK, mantenida en sincronía)",
+            "de": "Von der Familie geteilte Dokumentationsregeln (Kopie der von HYDRA-UMC-SDK, synchron gehalten)",
+            "fr": "Règles de documentation partagées par la famille (copie de celle de HYDRA-UMC-SDK, tenue synchronisée)",
+            "it": "Regole di documentazione condivise dalla famiglia (copia di quella di HYDRA-UMC-SDK, mantenuta sincronizzata)",
+            "ja": "ファミリー共通のドキュメント規則 (HYDRA-UMC-SDK のコピーで、同期を維持)",
+            "zh": "家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)",
+            "pt": "Regras de documentação partilhadas pela família (cópia da de HYDRA-UMC-SDK, mantida em sincronia)"
+          }
+        },
+        {
+          "name": "_readme_parity.py",
+          "desc": {
+            "en": "Check that the eight READMEs share",
+            "es": "Comprobación de que los ocho README",
+            "de": "Prüfung, dass die acht READMEs dieselbe",
+            "fr": "Contrôle que les huit README partagent la",
+            "it": "Verifica che gli otto README abbiano la",
+            "ja": "8つの README が同じ構造であることの",
+            "zh": "检查八个 README 结构一致",
+            "pt": "Verificação de que os oito README partilham"
+          },
+          "tree_desc": {
+            "en": "Check that the eight READMEs share one structure (a copy of HYDRA-UMC-SDK's, kept in sync)",
+            "es": "Comprobación de que los ocho README comparten estructura (copia de la de HYDRA-UMC-SDK, mantenida en sincronía)",
+            "de": "Prüfung, dass die acht READMEs dieselbe Struktur haben (Kopie der von HYDRA-UMC-SDK, synchron gehalten)",
+            "fr": "Contrôle que les huit README partagent la même structure (copie de celui de HYDRA-UMC-SDK, tenue synchronisée)",
+            "it": "Verifica che gli otto README abbiano la stessa struttura (copia di quella di HYDRA-UMC-SDK, mantenuta sincronizzata)",
+            "ja": "8つの README が同じ構造であることの検査 (HYDRA-UMC-SDK のコピーで、同期を維持)",
+            "zh": "检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)",
+            "pt": "Verificação de que os oito README partilham a mesma estrutura (cópia da de HYDRA-UMC-SDK, mantida em sincronia)"
+          }
+        },
+        {
+          "name": "hydra_project_tool.py",
+          "desc": {
+            "en": "The same commands in every repository",
+            "es": "Los mismos comandos en todos los",
+            "de": "Dieselben Befehle in jedem Repository",
+            "fr": "Les mêmes commandes dans chaque dépôt",
+            "it": "Gli stessi comandi in ogni repository",
+            "ja": "すべてのリポジトリで共通のコマンド",
+            "zh": "每个仓库相同的命令: validate",
+            "pt": "Os mesmos comandos em todos os repositórios"
+          },
+          "tree_desc": {
+            "en": "The same commands in every repository: validate, test, ci, version, status, bump",
+            "es": "Los mismos comandos en todos los repositorios: validate, test, ci, version, status, bump",
+            "de": "Dieselben Befehle in jedem Repository: validate, test, ci, version, status, bump",
+            "fr": "Les mêmes commandes dans chaque dépôt : validate, test, ci, version, status, bump",
+            "it": "Gli stessi comandi in ogni repository: validate, test, ci, version, status, bump",
+            "ja": "すべてのリポジトリで共通のコマンド: validate、test、ci、version、status、bump",
+            "zh": "每个仓库相同的命令: validate、test、ci、version、status、bump",
+            "pt": "Os mesmos comandos em todos os repositórios: validate, test, ci, version, status, bump"
+          }
+        }
+      ],
+      "tree_head": {
+        "en": "source code",
+        "es": "código fuente",
+        "de": "Quellcode",
+        "fr": "code source",
+        "it": "codice sorgente",
+        "ja": "ソースコード",
+        "zh": "源代码",
+        "pt": "código-fonte"
+      },
+      "sub": {
+        "en": "source code",
+        "es": "código fuente",
+        "de": "Quellcode",
+        "fr": "code source",
+        "it": "codice sorgente",
+        "ja": "ソースコード",
+        "zh": "源代码",
+        "pt": "código-fonte"
+      }
+    },
+    {
+      "name": {
+        "en": "folders",
+        "es": "carpetas",
+        "de": "Ordner",
+        "fr": "dossiers",
+        "it": "cartelle",
+        "ja": "フォルダ",
+        "zh": "文件夹",
+        "pt": "pastas"
+      },
+      "kind": "group",
+      "span": 3,
+      "accent": "b",
+      "columns": 2,
+      "rows": [
+        {
+          "name": "src/",
+          "desc": {
+            "en": "Source code (hydra_umc_visual_servoing_api",
+            "es": "Código fuente (paquete",
+            "de": "Quellcode (Paket",
+            "fr": "Code source (paquet",
+            "it": "Codice sorgente",
+            "ja": "ソースコード（hydra_umc_visua",
+            "zh": "源代码（hydra_umc_visual_s",
+            "pt": "Código-fonte (pacote"
+          },
+          "tree_desc": {
+            "en": "Source code (hydra_umc_visual_servoing_api package)",
+            "es": "Código fuente (paquete hydra_umc_visual_servoing_api)",
+            "de": "Quellcode (Paket hydra_umc_visual_servoing_api)",
+            "fr": "Code source (paquet hydra_umc_visual_servoing_api)",
+            "it": "Codice sorgente (pacchetto hydra_umc_visual_servoing_api)",
+            "ja": "ソースコード（hydra_umc_visual_servoing_api パッケージ）",
+            "zh": "源代码（hydra_umc_visual_servoing_api 包）",
+            "pt": "Código-fonte (pacote hydra_umc_visual_servoing_api)"
+          }
+        },
+        {
+          "name": "tests/",
+          "desc": {
+            "en": "Real pytest suite",
+            "es": "Suite pytest real",
+            "de": "Echte pytest-Suite",
+            "fr": "Suite pytest réelle",
+            "it": "Suite pytest reale",
+            "ja": "実際の pytest スイート（pose",
+            "zh": "真实 pytest 套件（pose",
+            "pt": "Suite pytest real"
+          },
+          "tree_desc": {
+            "en": "Real pytest suite (pose, servo, authorization, hailo_runtime, api, CLI)",
+            "es": "Suite pytest real (pose, servo, authorization, hailo_runtime, api, CLI)",
+            "de": "Echte pytest-Suite (Pose, Servo, Authorization, hailo_runtime, api, CLI)",
+            "fr": "Suite pytest réelle (pose, servo, authorization, hailo_runtime, api, CLI)",
+            "it": "Suite pytest reale (pose, servo, authorization, hailo_runtime, api, CLI)",
+            "ja": "実際の pytest スイート（pose、servo、authorization、hailo_runtime、api、CLI）",
+            "zh": "真实 pytest 套件（pose、servo、authorization、hailo_runtime、api、CLI）",
+            "pt": "Suite pytest real (pose, servo, autorização, hailo_runtime, api, CLI)"
+          }
+        },
+        {
+          "name": "docs/",
+          "desc": {
+            "en": "Documentation and kinematic theory",
+            "es": "Documentación y teoría cinemática",
+            "de": "Dokumentation und Kinematiktheorie",
+            "fr": "Documentation et théorie cinématique",
+            "it": "Documentazione e teoria cinematica",
+            "ja": "ドキュメントと運動学理論",
+            "zh": "文档与运动学理论",
+            "pt": "Documentação e teoria cinemática"
+          },
+          "tree_desc": {
+            "en": "Documentation and kinematic theory",
+            "es": "Documentación y teoría cinemática",
+            "de": "Dokumentation und Kinematiktheorie",
+            "fr": "Documentation et théorie cinématique",
+            "it": "Documentazione e teoria cinematica",
+            "ja": "ドキュメントと運動学理論",
+            "zh": "文档与运动学理论",
+            "pt": "Documentação e teoria cinemática"
+          }
+        },
+        {
+          "name": "images/",
+          "desc": {
+            "en": "Media and diagrams",
+            "es": "Medios y diagramas",
+            "de": "Medien und Diagramme",
+            "fr": "Médias et diagrammes",
+            "it": "Media e diagrammi",
+            "ja": "メディアと図表",
+            "zh": "媒体与图表",
+            "pt": "Multimédia e diagramas"
+          },
+          "tree_desc": {
+            "en": "Media and diagrams",
+            "es": "Medios y diagramas",
+            "de": "Medien und Diagramme",
+            "fr": "Médias et diagrammes",
+            "it": "Media e diagrammi",
+            "ja": "メディアと図表",
+            "zh": "媒体与图表",
+            "pt": "Multimédia e diagramas"
+          }
+        },
+        {
+          "name": "systemd/",
+          "desc": {
+            "en": "service unit",
+            "es": "unidad de servicio",
+            "de": "Dienst-Unit",
+            "fr": "unité de service",
+            "it": "unità di servizio",
+            "ja": "サービスユニット",
+            "zh": "服务单元",
+            "pt": "unidade de serviço"
+          },
+          "tree_desc": {
+            "en": "service unit",
+            "es": "unidad de servicio",
+            "de": "Dienst-Unit",
+            "fr": "unité de service",
+            "it": "unità di servizio",
+            "ja": "サービスユニット",
+            "zh": "服务单元",
+            "pt": "unidade de serviço"
+          }
+        },
+        {
+          "name": ".github/",
+          "desc": {
+            "en": "CI workflow and issue templates",
+            "es": "flujo de CI y plantillas de incidencias",
+            "de": "CI-Workflow und Issue-Vorlagen",
+            "fr": "workflow de CI et modèles de tickets",
+            "it": "workflow di CI e modelli di segnalazione",
+            "ja": "CI ワークフローと Issue テンプレート",
+            "zh": "CI 工作流和 Issue 模板",
+            "pt": "fluxo de CI e modelos de problemas"
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "en": "project files",
+        "es": "ficheros del proyecto",
+        "de": "Projektdateien",
+        "fr": "fichiers du projet",
+        "it": "file del progetto",
+        "ja": "プロジェクトのファイル",
+        "zh": "项目文件",
+        "pt": "ficheiros do projeto"
+      },
+      "kind": "group",
+      "span": 3,
+      "accent": "c",
+      "columns": 2,
+      "rows": [
+        {
+          "name": "pyproject.toml",
+          "desc": {
+            "en": "package metadata",
+            "es": "Metadatos del paquete",
+            "de": "Paketmetadaten",
+            "fr": "Métadonnées du paquet",
+            "it": "Metadati del pacchetto",
+            "ja": "パッケージのメタデータ",
+            "zh": "包的元数据",
+            "pt": "Metadados do pacote"
+          },
+          "tree_desc": {
+            "en": "package metadata",
+            "es": "Metadatos del paquete, dependencias, version cuentakilometros",
+            "de": "Paketmetadaten",
+            "fr": "Métadonnées du paquet, dépendances, version compteur",
+            "it": "Metadati del pacchetto, dipendenze, versione a contachilometri",
+            "ja": "パッケージのメタデータ",
+            "zh": "包的元数据",
+            "pt": "Metadados do pacote, dependências, versão ao estilo conta-quilómetros"
+          }
+        },
+        {
+          "name": "bump_version.py",
+          "desc": {
+            "en": "explicit version bump",
+            "es": "Incremento de versión tipo cuentakilómetros",
+            "de": "ausdrückliche Versionserhöhung",
+            "fr": "Incrément de version type compteur",
+            "it": "Incremento di versione stile contachilometri",
+            "ja": "明示的なバージョン更新",
+            "zh": "显式提升版本",
+            "pt": "Subida de versão ao estilo conta-quilómetros"
+          },
+          "tree_desc": {
+            "en": "explicit version bump",
+            "es": "Incremento de versión tipo cuentakilómetros (solo lo ejecuta el comando `bump` explícito)",
+            "de": "ausdrückliche Versionserhöhung",
+            "fr": "Incrément de version type compteur kilométrique (exécuté seulement par la commande `bump` explicite)",
+            "it": "Incremento di versione stile contachilometri (eseguito solo dal comando `bump` esplicito)",
+            "ja": "明示的なバージョン更新",
+            "zh": "显式提升版本",
+            "pt": "Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)"
+          }
+        },
+        {
+          "name": "bump_manifest_version.py",
+          "desc": {
+            "en": "Syncs hydra-umc.project.json's version",
+            "es": "Sincroniza la versión de",
+            "de": "Synchronisiert die Version von",
+            "fr": "Synchronise la version de",
+            "it": "Sincronizza la versione di",
+            "ja": "hydra-umc.project.json",
+            "zh": "将 hydra-umc.project.js",
+            "pt": "Sincroniza a versão do"
+          },
+          "tree_desc": {
+            "en": "Syncs hydra-umc.project.json's version to the native one (--sync)",
+            "es": "Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)",
+            "de": "Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)",
+            "fr": "Synchronise la version de hydra-umc.project.json avec la version native (--sync)",
+            "it": "Sincronizza la versione di hydra-umc.project.json con quella nativa (--sync)",
+            "ja": "hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)",
+            "zh": "将 hydra-umc.project.json 的版本与原生版本同步(--sync)",
+            "pt": "Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)"
+          }
+        },
+        {
+          "name": "build.sh / build.bat",
+          "desc": {
+            "en": "venv + editable install + compile-check +",
+            "es": "venv + instalacion editable + compile-check",
+            "de": "venv + editierbare Installation +",
+            "fr": "venv + installation éditable +",
+            "it": "venv + installazione editabile +",
+            "ja": "venv + editable インストール",
+            "zh": "venv + 可编辑安装 + 编译检查 +",
+            "pt": "venv + instalação editável + verificação de"
+          },
+          "tree_desc": {
+            "en": "venv + editable install + compile-check + tests",
+            "es": "venv + instalacion editable + compile-check + tests",
+            "de": "venv + editierbare Installation + Compile-Check + Tests",
+            "fr": "venv + installation éditable + compile-check + tests",
+            "it": "venv + installazione editabile + compile-check + test",
+            "ja": "venv + editable インストール + コンパイルチェック + テスト",
+            "zh": "venv + 可编辑安装 + 编译检查 + 测试",
+            "pt": "venv + instalação editável + verificação de compilação + testes"
+          }
+        },
+        {
+          "name": "build-test.sh / build-test.bat",
+          "desc": {
+            "en": "Non-versioning build check",
+            "es": "Comprobación de compilación sin versionado",
+            "de": "Nicht-versionierender Build-Check",
+            "fr": "Vérification de build sans versionnage",
+            "it": "Controllo build senza versionamento",
+            "ja": "バージョンを増やさないビルドチェック",
+            "zh": "不递增版本号的构建检查",
+            "pt": "Verificação de compilação sem subir a versão"
+          },
+          "tree_desc": {
+            "en": "Non-versioning build check (no CHANGELOG/version bump)",
+            "es": "Comprobación de compilación sin versionado",
+            "de": "Nicht-versionierender Build-Check",
+            "fr": "Vérification de build sans versionnage",
+            "it": "Controllo build senza versionamento",
+            "ja": "バージョンを増やさないビルドチェック",
+            "zh": "不递增版本号的构建检查",
+            "pt": "Verificação de compilação sem subir a versão (sem CHANGELOG/subida de versão)"
+          }
+        },
+        {
+          "name": "run.sh / run.bat",
+          "desc": {
+            "en": "Runs the entry point from the local venv",
+            "es": "Ejecuta el entry point desde el venv local",
+            "de": "Führt den Einstiegspunkt aus dem lokalen",
+            "fr": "Exécute le point d'entrée depuis le venv",
+            "it": "Esegue l'entry point dal venv locale",
+            "ja": "ローカル venv からエントリポイントを実",
+            "zh": "从本地 venv 运行入口点",
+            "pt": "Executa o ponto de entrada a partir do venv"
+          },
+          "tree_desc": {
+            "en": "Runs the entry point from the local venv",
+            "es": "Ejecuta el entry point desde el venv local",
+            "de": "Führt den Einstiegspunkt aus dem lokalen venv aus",
+            "fr": "Exécute le point d'entrée depuis le venv local",
+            "it": "Esegue l'entry point dal venv locale",
+            "ja": "ローカル venv からエントリポイントを実行",
+            "zh": "从本地 venv 运行入口点",
+            "pt": "Executa o ponto de entrada a partir do venv local"
+          }
+        },
+        {
+          "name": "CHANGELOG.md",
+          "desc": {
+            "en": "what changed in each version",
+            "es": "qué cambió en cada versión",
+            "de": "was sich in jeder Version geändert hat",
+            "fr": "ce qui a changé à chaque version",
+            "it": "cosa è cambiato in ogni versione",
+            "ja": "各バージョンの変更点",
+            "zh": "每个版本的变更",
+            "pt": "o que mudou em cada versão"
+          }
+        },
+        {
+          "name": "Dockerfile",
+          "desc": {
+            "en": "container image",
+            "es": "imagen de contenedor",
+            "de": "Container-Image",
+            "fr": "image de conteneur",
+            "it": "immagine del container",
+            "ja": "コンテナイメージ",
+            "zh": "容器镜像",
+            "pt": "imagem de contentor"
+          }
+        },
+        {
+          "name": "hydra-umc.project.json",
+          "desc": {
+            "en": "manifest: version, maturity, family",
+            "es": "manifiesto: versión, madurez, familia",
+            "de": "Manifest: Version, Reifegrad, Familie",
+            "fr": "manifeste : version, maturité, famille",
+            "it": "manifesto: versione, maturità, famiglia",
+            "ja": "マニフェスト：バージョン、成熟度、ファミリー",
+            "zh": "清单：版本、成熟度、系列",
+            "pt": "manifesto: versão, maturidade, família"
+          }
+        },
+        {
+          "name": "test.sh",
+          "desc": {
+            "en": "runs the tests",
+            "es": "ejecuta las pruebas",
+            "de": "führt die Tests aus",
+            "fr": "lance les tests",
+            "it": "esegue i test",
+            "ja": "テストを実行",
+            "zh": "运行测试",
+            "pt": "executa os testes"
+          }
+        }
+      ]
+    }
+  ]
+}

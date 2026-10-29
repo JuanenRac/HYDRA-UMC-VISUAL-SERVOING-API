@@ -1,3 +1,9 @@
+<!-- =============================================================================
+HYDRA-UMC-VISUAL-SERVOING-API - Pose-correction law with zone-gated authorisation
+Copyright (C) JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+GPL-3.0-or-later - see LICENSE
+============================================================================= -->
+
 <p align="center">
   <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-VISUAL-SERVOING-API banner" width="100%">
 </p>
@@ -12,15 +18,16 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
+  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
-
-**Verificação de honestidade - o que realmente funciona hoje:** a lei de correção PBVS (`pose.py`, `servo.py`), a política de autorização protegida pela segurança (`authorization.py`), a API JSON/HTTP (`api.py`) e a fronteira de integração com o HailoRT (`hailo_runtime.py`) são reais e testadas - 172 testes a passar (`pytest tests/`) (5 dos quais são testes de integração que precisam do repositório irmão HYDRA-UMC-SAFETY-ZONES e são ignorados sem ele), incluindo um teste real de integração de ponta a ponta contra o HYDRA-UMC-SAFETY-ZONES e uma ida e volta real contra um servidor `api.py` em execução, e não apenas testes unitários isolados. Nada disto precisa de uma câmara nem de uma NPU para ser executado ou testado - `correct`/`request`/`serve` funcionam hoje com poses sintéticas. A *estimação* real de pose 6-DOF a partir de um fluxo de câmara, o fluxo gRPC para o núcleo HYDRA-UMC e a execução efetiva de inferência através do `hailo_runtime.py` continuam a ser trabalho futuro: este ambiente não tem nenhum módulo Hailo-8 físico nem um `.hef` compilado de estimação de pose, pelo que essa fronteira de integração nunca foi exercitada contra hardware real. Veja o `CHANGELOG.md` para saber exatamente o que foi entregue até agora e a lista de funcionalidades da própria secção 1, mais abaixo, para o detalhe real/futuro de cada uma.
-
-**Quem define os limites de segurança:** os limites (confiança mínima, idade máxima do dado, ganho máximo, velocidades linear e angular máximas, validade do comando) são fixados no arranque do serviço (`serve --max-linear-speed ...`, valores seguros por omissão: 0,25 m/s, 0,5 rad/s, ganho 2). Um pedido só os pode apertar: pedir algo mais folgado é um `400`, e `safety_state`, `confidence` e `data_age_ms` continuam a ser autodeclarados por quem chama, pelo que é preciso uma fonte real de SAFETY-ZONES antes de ligar um robô. Cada resposta traz um comando: um pedido recusado ou uma pose convergida recebe um comando zero explícito com `"hold": true`, além de `issued_at_ms`, `valid_for_ms` e `seq`; **o consumidor tem de parar se não chegar um comando válido mais recente dentro de `valid_for_ms`**. O mesmo `frame_id` não pode produzir dois comandos. Por fazer: o erro angular é a diferença de ângulos de Euler (não um erro eixo-ângulo), pelo que é pouco fiável perto de um pitch de 90 graus; não se aplica calibração mão-olho, logo Eye-in-Hand e Eye-to-Hand ainda não se distinguem; o ciclo não tem memória (sem limitador de taxa, filtro nem temporizador de perda de visão).
 
 ---
 
 > **Estado de segurança (safety e security):** este ecossistema não é um sistema de segurança certificado. Ainda não existe um caminho de E-STOP por hardware, nem limites ou interlocks impostos pelo firmware, nem um comando de movimento verificado; as imagens de firmware são verificadas com CRC32 e um HMAC-SHA256 de chave partilhada, não com uma assinatura assimétrica; TLS e TLS mútuo são opcionais e estão desativados por defeito; nenhuma placa própria foi ainda montada ou testada. Leia a [base de segurança](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md) e o [modelo de ameaças](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md) antes de confiar em qualquer afirmação aqui para a segurança de uma pessoa.
+
+---
 
 ## 📋 Num relance
 
@@ -28,10 +35,12 @@
 |---|---|
 | Versão | `0.2.0` |
 | Maturidade | Funcional |
-| Testes | 128 (`pytest tests/`) |
+| Testes | 172 (`python -m pytest -q tests`) |
 | Tecnologia | Python / 6-DOF pose estimation |
 | Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
 | Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
+
+**Ir para:** [Visão geral](#-visão-geral) · [Arquitetura](#-arquitetura) · [Início rápido](#-início-rápido) · [Testes](#-testes) · [Estrutura do repositório](#-estrutura-do-repositório) · [Projetos relacionados](#-projetos-relacionados)
 
 ## 🚦 Estado do projeto
 
@@ -42,11 +51,11 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Área | Estado | O que significa aqui |
 |---|---|---|
 | Software | 🟡 | Funciona para o seu propósito principal; a verificação de honestidade acima lista o que ainda falta |
-| Testes | 🟢 | 128 testes automáticos, executados a cada alteração |
+| Testes | 🟢 | 172 testes automáticos, executados a cada alteração |
 | Hardware real | 🔴 | Ainda não: não há registo de execução em hardware real para esta versão |
 | Documentação | 🟢 | README em oito idiomas, verificado contra o manifesto a cada alteração |
 
-## 1. 🛠️ VISÃO TÉCNICA GERAL
+## 🎯 Visão geral
 
 O **HYDRA-UMC-VISUAL-SERVOING-API** destina-se a ser a ponte de precisão entre perceção e movimento. Calcula o delta de erro entre uma pose desejada e a pose visual de um objeto que lhe é fornecida e devolve uma correção sujeita a autorização; nenhuma câmara o alimenta ainda e nada envia correções ao firmware.
 
@@ -63,9 +72,18 @@ Foi concebido para suportar configurações **Eye-in-Hand** (câmara na ferramen
 * ⚡ **Acelerado por hardware:** usa a saída do Hailo-8 para um cálculo instantâneo de coordenadas. *(trabalho futuro, pelo mesmo motivo.)*
 * 🔌 **Fronteira de integração com o HailoRT, preparada antes do módulo:** o `hailo_runtime.py` está escrito contra a API real e confirmada do `hailo_platform` (`VDevice`, `HEF`, `ConfigureParams`) - importada sob demanda para que este repositório instale/teste de forma limpa sem o pacote `hailort` nem um módulo Hailo-8 - e o `hailo_output_to_pose()` adapta um resultado de inferência real diretamente para o `Pose6D` que o `compute_pose_error()` já consome. *(implementado, apenas a fronteira de integração - executar inferência a sério ainda precisa de um `.hef` compilado de estimação de pose e de um módulo Hailo-8 físico.)*
 
----
+## 🧩 Papel no HYDRA-UMC
 
-## 2. 🔄 CICLO DE SERVO VISUAL
+O **HYDRA-UMC-VISUAL-SERVOING-API** transforma a diferença entre uma pose atual e uma pose alvo de 6 graus de liberdade num comando de velocidade limitado, dentro de uma sessão que se lembra do ciclo. Um pedido só é atendido se os seus dados forem suficientemente recentes, a confiança suficientemente alta e o estado de segurança permitir movimento; um cliente pode apertar os limites, nunca afrouxá-los. Ainda não chega nenhuma pose de uma câmara.
+
+## 🏛️ Arquitetura
+
+<p align="center">
+  <img src="images/architecture.svg" alt="HYDRA-UMC-VISUAL-SERVOING-API architecture" width="100%">
+</p>
+
+<details>
+<summary>Versão em texto do diagrama (Mermaid)</summary>
 
 ```mermaid
 flowchart LR
@@ -78,9 +96,9 @@ flowchart LR
     MOVE --> TARGET
 ```
 
----
+</details>
 
-## 3. 🧱 ARQUITETURA E DECISÕES DE DESENHO
+### ARQUITETURA E DECISÕES DE DESENHO
 
 * **Porque esta API não tem hardware/firmware próprios.** Corre inteiramente no módulo CM5 + Hailo-8 partilhado, pertencente ao pai de integração, o HYDRA-UMC-VISION-NODE - não há placa própria para desenhar, pelo que as pastas `hardware/`/`firmware/`/`os/` foram retiradas em vez de deixadas vazias.
 * **Porque é irmã, e não um submódulo, do HYDRA-UMC-VISION-NODE.** A correção de pose corre como processo/implementação próprios, para que uma falha ou um ciclo de inferência lento aqui não possa bloquear o pipeline de deteção do próprio pai, de que o HYDRA-UMC-SAFETY-ZONES depende para o tempo de E-STOP.
@@ -89,51 +107,23 @@ flowchart LR
 * **Porque o `authorize_correction()` verifica o `safety_state` antes da confiança/atualidade.** Uma falha de segurança tem de vencer tudo o resto, mesmo uma deteção perfeitamente recente e confiável - por isso `INHIBITED` (safety_state != "READY") é verificado primeiro e interrompe o resto da política. Só depois de confirmar que o braço é seguro de mover é que importa saber se os *dados* são suficientemente fiáveis para o mover (`REJECTED` por baixa confiança ou dados antigos). Isto espelha a precedência de `INHIBITED` antes de `DANGER`/`WARNING` já usada no HYDRA-UMC-SAFETY-ZONES.
 * **Porque o `request` é um subcomando novo em vez de alterar o `correct`.** O `correct` é o utilitário matemático de baixo nível já existente (sem noção de segurança nem de atualidade da câmara), com os seus próprios chamadores e testes; envolvê-lo numa porta de segurança no próprio sítio mudaria em silêncio o seu contrato. O `request` acrescenta o ponto de entrada protegido e voltado para a câmara que o código do ecossistema deve realmente chamar, enquanto o `correct` continua disponível sem alterações para o uso direto da matemática de pose.
 
----
+## 🚀 Início rápido
 
-## 📂 ESTRUTURA DE DIRETÓRIOS
+Requer Python 3.10 ou superior.
 
-O CM5 + Hailo-8 é hardware comercial sem placa própria, pelo que este projeto
-não leva pasta `hardware/` nem `firmware/`. O `os/` e o `models/`
-vivem apenas no pai de integração, `HYDRA-UMC-VISION-NODE`.
-
-```text
-HYDRA-UMC-VISUAL-SERVOING-API/
-├── src/                 # Código-fonte (pacote hydra_umc_visual_servoing_api)
-│   └── hydra_umc_visual_servoing_api/
-│       ├── __init__.py          # Descrição e versão do pacote
-│       ├── pose.py           # Pose6D - pose 6-DOF (x, y, z, roll, pitch, yaw)
-│       ├── servo.py          # Lei de correção PBVS: erro de pose + comando de velocidade
-│       ├── session.py        # Sessão de servo: período, filtro, zona morta, limite de aceleração, tempo sem visão
-│       ├── authorization.py  # Política de pedidos protegida pela segurança (INHIBITED/REJECTED/ACCEPTED)
-│       ├── hailo_runtime.py  # Fronteira real de integração do estimador de pose HailoRT (hailo_platform), importada sob demanda
-│       ├── api.py            # Superfície JSON/HTTP simples (http.server da biblioteca padrão) sobre correct/request
-│       ├── main.py           # Ponto de entrada da CLI (invocação simples + `correct` + `request`)
-│       ├── access.py         # Token Bearer opcional para a API HTTP (dispensável em loopback, obrigatório fora dele)
-│       └── limits.py         # Os limites que o serviço aplica, fixados no arranque (quem chama pode pedir mais estritos, nunca mais folgados)
-├── tests/               # Suite pytest real (pose, servo, autorização, hailo_runtime, api, CLI)
-├── docs/                # Documentação e teoria cinemática
-├── build/               # Saída da compilação (o .venv local também vive aqui)
-├── images/              # Multimédia e diagramas
-├── systemd/
-│   └── hydra-umc-visual-servoing-api.service # Unidade systemd da API local de correção PBVS do CM5
-├── tools/
-│   ├── build_test.py    # Verificação de compilação sem subir a versão (sem subida de versão/CHANGELOG)
-│   ├── ci_validate.py   # Validação de manifesto/CHANGELOG/documentação usada pelo CI
-│   ├── _doc_policy.py   # Regras de documentação partilhadas pela família (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
-│   ├── _readme_parity.py # Verificação de que os oito README partilham a mesma estrutura (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
-│   └── hydra_project_tool.py # Os mesmos comandos em todos os repositórios: validate, test, ci, version, status, bump
-├── pyproject.toml       # Metadados do pacote, dependências, versão ao estilo conta-quilómetros
-├── bump_version.py      # Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
-├── bump_manifest_version.py # Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
-├── build.sh / build.bat # venv + instalação editável + verificação de compilação + testes
-├── build-test.sh / build-test.bat # Verificação de compilação sem subir a versão (sem CHANGELOG/subida de versão)
-└── run.sh / run.bat     # Executa o ponto de entrada a partir do venv local
+```bash
+./build.sh  # Linux, macOS (build.bat on Windows)
+./run.sh correct --current 0.10,0.20,0.30,0.0,0.0,0.0 --target 0.15,0.20,0.25,0.0,0.0,0.10
+./run.sh serve --port 8106
 ```
 
----
+## 🧪 Testes
 
-## 🏗️ GUIA DE COMPILAÇÃO E EXECUÇÃO
+172 testes automáticos correm com `python -m pytest -q tests`. Não precisam de hardware nem de nada fora desta máquina.
+
+A CI executa `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que verifica o manifesto, os documentos, os oito README e as imagens.
+
+## 🏗️ Compilação e publicação
 
 Requer o Python 3.10+.
 
@@ -183,9 +173,48 @@ Exemplo real - pedir uma correção protegida pela segurança (aceite, inibida e
 # outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   (exit code 1)
 ```
 
----
+## 📂 Estrutura do repositório
 
-## ✅ Estado atual e próximos passos
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Repository structure of HYDRA-UMC-VISUAL-SERVOING-API" width="100%">
+</p>
+
+<details>
+<summary>Versão em texto da árvore</summary>
+
+```text
+HYDRA-UMC-VISUAL-SERVOING-API/
+├── tools/                           código-fonte
+│   ├── build_test.py                Verificação de compilação sem subir a versão (sem subida de versão/CHANGELOG)
+│   ├── ci_validate.py               Validação de manifesto/CHANGELOG/documentação usada pelo CI
+│   ├── _doc_policy.py               Regras de documentação partilhadas pela família (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
+│   ├── _readme_parity.py            Verificação de que os oito README partilham a mesma estrutura (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
+│   └── hydra_project_tool.py        Os mesmos comandos em todos os repositórios: validate, test, ci, version, status, bump
+├── src/                             Código-fonte (pacote hydra_umc_visual_servoing_api)
+├── tests/                           Suite pytest real (pose, servo, autorização, hailo_runtime, api, CLI)
+├── docs/                            Documentação e teoria cinemática
+├── images/                          Multimédia e diagramas
+├── systemd/                         unidade de serviço
+├── .github/                         fluxo de CI e modelos de problemas
+├── pyproject.toml                   Metadados do pacote, dependências, versão ao estilo conta-quilómetros
+├── bump_version.py                  Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
+├── bump_manifest_version.py         Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
+├── build.sh / build.bat             venv + instalação editável + verificação de compilação + testes
+├── build-test.sh / build-test.bat   Verificação de compilação sem subir a versão (sem CHANGELOG/subida de versão)
+├── run.sh / run.bat                 Executa o ponto de entrada a partir do venv local
+├── CHANGELOG.md                     o que mudou em cada versão
+├── Dockerfile                       imagem de contentor
+├── hydra-umc.project.json           manifesto: versão, maturidade, família
+└── test.sh                          executa os testes
+```
+
+</details>
+
+## 🗺️ Roteiro e limites conhecidos
+
+**Limites conhecidos hoje**
+
+### Estado atual e próximos passos
 
 **Real hoje:** a lei de correção PBVS de erro de pose e comando de velocidade
 (`pose.py`, `servo.py`) - o passo "Error Calculation (Pose Delta)" do
@@ -202,13 +231,16 @@ através do `hailo_runtime.py` precisa de um `.hef` real compilado de estimaçã
 modelo escolhido) e de uma NPU Hailo-8 física ligada, e o fluxo gRPC de baixa latência do
 comando de velocidade resultante para o núcleo HYDRA-UMC é trabalho futuro à parte.
 
-## 🚀 ROTEIRO
+### ROTEIRO
+
 * **Fase 1:** sincronização e calibração do pipeline multicâmara para 8 fluxos USB 3.0.
 * **Fase 2:** migração para o YOLOv11 e otimização para o Hailo-8L na deteção de componentes industriais.
 * **Fase 3:** reconstrução 3D em tempo real a partir de nós de visão estéreo e mapeamento dinâmico de zonas de segurança.
 * **Fase 4:** suporte de seguimento visual 9-DOF (incluindo redundância de orientação) e correção sub-micrométrica.
 
----
+## 🌍 Idiomas
+
+Este README e os documentos do repositório existem em oito idiomas: inglês, espanhol, alemão, francês, italiano, japonês, chinês e português (Portugal). São escritos em conjunto e a CI verifica que os oito ficheiros têm as mesmas secções e as mesmas ligações. Este repositório não tem ecrã nem catálogo de mensagens próprios, por isso não há textos de interface para traduzir.
 
 ## 🔗 Projetos relacionados
 
@@ -301,22 +333,27 @@ Este projeto faz parte do ecossistema de robótica HYDRA-UMC do mesmo autor (Jua
 - **[HYDRA-UMC-OPS-AGENT](https://github.com/JuanenRac/HYDRA-UMC-OPS-AGENT)** — coordenador de incidentes de manutenção: um papel de borda de poucos privilégios recolhe um inventário/estado higienizado, um papel de plano de controlo mostra-o só de leitura e pede a um fornecedor de IA que sugira um diagnóstico; nunca aplica um patch nem implanta nada.
 - **[HYDRA-UMC-DEV-SERVER](https://github.com/JuanenRac/HYDRA-UMC-DEV-SERVER)** — anfitrião de desenvolvimento reproduzível (Raspberry Pi 5 / CM5) que guarda o código-fonte do ecossistema e executa tarefas limitadas de compilação/teste numa fila durável; um papel de desenvolvimento dedicado, explicitamente não um CM5 operacional.
 
----
+## 📚 Documentação
 
-## 📚 Documentação e comunidade
+Onde ler mais:
 
-- **[docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md)** — cada invocação de `correct`/`request`/`serve`, saída real capturada de uma execução da CLI instalada, a tabela de códigos de saída e o contrato JSON/HTTP `POST /correct`/`POST /request`/`GET /stats`.
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — pilha tecnológica e diretrizes de código para um pull request.
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — as normas de comportamento esperadas nesta comunidade.
-- **[SECURITY.md](SECURITY.md)** — como comunicar uma vulnerabilidade e as áreas de segurança em que este projeto se concentra.
-- **[SUPPORT.md](SUPPORT.md)** — onde fazer perguntas e comunicar erros.
-- **[LICENSE.md](LICENSE.md)** — a licença deste projeto.
+* **[docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md)** — cada invocação de `correct`/`request`/`serve`, saída real capturada de uma execução da CLI instalada, a tabela de códigos de saída e o contrato JSON/HTTP `POST /correct`/`POST /request`/`GET /stats`.
+* [Base de segurança do ecossistema](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)
+* [Modelo de ameaças do ecossistema](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)
+* [Registo de alterações deste repositório](CHANGELOG.md)
+* [Licença deste repositório](LICENSE.md)
+
+## 🤝 Contribuir e comunidade
+
+* Antes de um pull request execute `HYDRA_UMC_CI=1 py -3 tools/ci_validate.py` (ou `HYDRA_UMC_CI=1 python3 tools/ci_validate.py`): tem de imprimir `CI_VALIDATION=PASS`. Não execute `build.sh` nem `build.bat` para esta verificação; compilar não é verificar.
+* Os oito README são escritos a partir de uma única fonte em HYDRA-UMC-DOCS; não os edite à mão. Altere a fonte e escreva-os de novo com `tools/make_readmes.py`.
+* Não afirme num README o que não foi executado: diga «simulado» ou «não testado em hardware» quando for a verdade.
+* Consulte [CONTRIBUTING.md](CONTRIBUTING.md), o [código de conduta](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md) e [SUPPORT.md](SUPPORT.md).
 
 ## 👤 AUTOR
-**JuanenRac** (Electro Hobby 3D)
-📧 electrohobby3d@gmail.com
-📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
+
+**JuanenRac (Electro Hobby 3D)** · electrohobby3d@gmail.com
 
 ## 📜 LICENÇA
-GPL-3.0-or-later - consulte LICENSE para mais detalhes.
 
+GPL-3.0-or-later - [LICENSE](LICENSE).

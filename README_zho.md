@@ -1,3 +1,9 @@
+<!-- =============================================================================
+HYDRA-UMC-VISUAL-SERVOING-API - Pose-correction law with zone-gated authorisation
+Copyright (C) JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+GPL-3.0-or-later - see LICENSE
+============================================================================= -->
+
 <p align="center">
   <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-VISUAL-SERVOING-API banner" width="100%">
 </p>
@@ -9,18 +15,19 @@
 ### 📐 受区域门控的位姿修正律(v0:尚无摄像头位姿估计)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licencia-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
+  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
-
-**诚实核查 - 今天真正能运行的部分：** PBVS 修正律（`pose.py`、`servo.py`）、带安全闸门的授权策略（`authorization.py`）、JSON/HTTP API（`api.py`），以及 HailoRT 集成边界（`hailo_runtime.py`）都是真实且经过测试的——172 个通过的测试（`pytest tests/`）（其中 5 个是需要同级仓库 HYDRA-UMC-SAFETY-ZONES 的集成测试，没有它时会被跳过），包括一个针对 HYDRA-UMC-SAFETY-ZONES 的真实端到端集成测试，以及针对一个真实运行中的 `api.py` 服务器的真实往返测试，而不只是孤立的单元测试。这些功能都不需要摄像头或 NPU 就能运行或测试——`correct`/`request`/`serve` 如今都能针对合成姿态正常工作。而从摄像头画面进行真正的 6 自由度姿态估计、向 HYDRA-UMC 核心的 gRPC 数据流，以及通过 `hailo_runtime.py` 真正运行推理，仍然是未来的工作：这个环境既没有实体的 Hailo-8 模块，也没有编译好的姿态估计 `.hef` 文件，所以这个集成边界从未在真实硬件上运行过。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
-
-**谁来设定安全限制：** 限制（最低置信度、数据最大时效、最大增益、最大线速度和角速度、命令有效期）在服务启动时固定（`serve --max-linear-speed ...`，安全默认值：0.25 m/s、0.5 rad/s、增益 2）。请求只能收紧这些限制：要求更宽松的值会得到 `400`；`safety_state`、`confidence` 和 `data_age_ms` 仍由调用方自行声明，因此在连接机器人之前需要真实的 SAFETY-ZONES 数据源。每个响应都带有命令：被拒绝的请求或已收敛的位姿会得到 `"hold": true` 的明确零命令，以及 `issued_at_ms`、`valid_for_ms` 和 `seq`；**如果在 `valid_for_ms` 内没有收到更新的有效命令，消费方必须停止。** 同一个 `frame_id` 不能产生两条命令。尚未完成：角度误差是欧拉角之差（不是轴角误差），因此在俯仰角接近 90 度时不可靠；没有应用手眼标定，所以尚不区分 Eye-in-Hand 与 Eye-to-Hand；控制回路没有记忆（没有速率限制、滤波器或视觉丢失计时器）。
 
 ---
 
 > **安全与安防现状:**本生态系统不是经认证的安全系统。目前尚无硬件 E-STOP 通路,没有由固件强制执行的限位或联锁,也没有经过验证的运动指令;固件映像使用 CRC32 和共享密钥的 HMAC-SHA256 校验,而非非对称签名;TLS 与双向 TLS 均为可选项,默认关闭;自制电路板尚未组装或测试。在依赖此处任何说法来保障人身安全之前,请先阅读[安全基线](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)和[威胁模型](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)。
+
+---
 
 ## 📋 速览
 
@@ -28,10 +35,12 @@
 |---|---|
 | 版本 | `0.2.0` |
 | 成熟度 | 可用 |
-| 测试 | 128 (`pytest tests/`) |
+| 测试 | 172 (`python -m pytest -q tests`) |
 | 技术栈 | Python / 6-DOF pose estimation |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
+
+**跳转：** [概述](#-概述) · [架构](#-架构) · [快速开始](#-快速开始) · [测试](#-测试) · [仓库结构](#-仓库结构) · [相关项目](#-相关项目)
 
 ## 🚦 项目状态
 
@@ -42,11 +51,11 @@
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 128 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 172 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 文档 | 🟢 | 八种语言的 README，每次变更都会与清单核对 |
 
-## 1. 🛠️ 技术概述
+## 🎯 概述
 
 **HYDRA-UMC-VISUAL-SERVOING-API** 的目标是成为感知与运动之间的精密桥梁。它计算期望位姿与所提供物体的视觉位姿之间的误差,并返回受授权门控的修正量;目前没有摄像头为它供数,也没有任何东西把修正量发送给固件。
 
@@ -63,9 +72,18 @@
 * ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。*（未来工作，原因相同。）*
 * 🔌 **HailoRT 集成边界，先于模块本身准备就绪：** `hailo_runtime.py` 依据真实、已确认的 `hailo_platform` API(`VDevice`、`HEF`、`ConfigureParams`)编写——采用延迟导入,因此即使没有安装 `hailort` 包或没有 Hailo-8 模块存在,本仓库也能干净地安装/测试——并且 `hailo_output_to_pose()` 会将真实的推理结果直接适配为 `compute_pose_error()` 已经在使用的 `Pose6D`。*(已实现,仅为集成边界——真正运行推理仍然需要一个真实编译好的姿态估计 `.hef` 和一个物理的 Hailo-8 模块。)*
 
----
+## 🧩 在 HYDRA-UMC 中的角色
 
-## 2. 🔄 视觉伺服回路
+**HYDRA-UMC-VISUAL-SERVOING-API** 把当前 6 自由度位姿与目标位姿之差转换为有界的速度指令，并在记住控制回路的会话中进行。只有当数据足够新、置信度足够高且安全状态允许运动时，请求才会得到回答；调用方可以收紧限制，但绝不能放宽。目前还没有来自摄像头的位姿。
+
+## 🏛️ 架构
+
+<p align="center">
+  <img src="images/architecture.svg" alt="HYDRA-UMC-VISUAL-SERVOING-API architecture" width="100%">
+</p>
+
+<details>
+<summary>图表的文本版本（Mermaid）</summary>
 
 ```mermaid
 flowchart LR
@@ -78,9 +96,9 @@ flowchart LR
     MOVE --> TARGET
 ```
 
----
+</details>
 
-## 3. 🧱 架构与设计决策
+### 架构与设计决策
 
 * **为什么本 API 没有自己的硬件/固件。** 它完全运行在集成父项目 HYDRA-UMC-VISION-NODE 所拥有的共享 CM5 + Hailo-8 模块上——没有需要自行设计的板卡，因此 `hardware/`/`firmware/`/`os/` 被直接省略，而非留空。
 * **为什么它是 HYDRA-UMC-VISION-NODE 的兄弟项目，而非子模块。** 位姿修正作为独立的进程/可部署单元运行，因此这里的崩溃或缓慢的推理周期不会拖累父项目自身的检测流水线，而 HYDRA-UMC-SAFETY-ZONES 依赖该流水线来确定 E-STOP 时机。
@@ -89,51 +107,23 @@ flowchart LR
 * **为什么 `authorize_correction()` 在检查置信度/新鲜度之前先检查 `safety_state`。** 安全故障必须凌驾于一切之上，即便面对一个完全新鲜、可信的检测结果也是如此——因此 `INHIBITED`（safety_state != "READY"）被最先检查，并短路掉策略的其余部分。只有在确认机械臂可以安全移动之后，*数据*是否足够可信才会影响是否据此移动它（置信度过低或数据过期则返回 `REJECTED`）。这与 HYDRA-UMC-SAFETY-ZONES 中已经使用的 `INHIBITED` 优先于 `DANGER`/`WARNING` 的顺序一致。
 * **为什么 `request` 是新增子命令而不是修改 `correct`。** `correct` 是已有的底层纯数学工具（不感知安全状态，也没有摄像头新鲜度的概念），有自己的调用方和测试；就地为其套上安全联锁会悄悄改变它的契约。`request` 增加了这个带联锁、面向摄像头的入口点，生态系统代码实际上应当调用它，而 `correct` 保持不变，仍可用于直接的位姿数学运算。
 
----
+## 🚀 快速开始
 
-## 📂 目录结构
+需要 Python 3.10 或更高版本。
 
-CM5 + Hailo-8 是现成硬件，没有自己的板卡，因此本项目不携带 `hardware/`
-或 `firmware/` 文件夹。`os/` 和 `models/` 仅存在于集成父项目
-`HYDRA-UMC-VISION-NODE` 中。
-
-```text
-HYDRA-UMC-VISUAL-SERVOING-API/
-├── src/                 # 源代码（hydra_umc_visual_servoing_api 包）
-│   └── hydra_umc_visual_servoing_api/
-│       ├── __init__.py          # 包说明与版本
-│       ├── pose.py           # Pose6D —— 6 自由度位姿（x, y, z, roll, pitch, yaw）
-│       ├── servo.py          # PBVS 修正律：位姿误差 + 速度指令
-│       ├── session.py        # 伺服会话：周期、滤波、死区、加速度限制、视觉超时
-│       ├── authorization.py  # 安全联锁策略（INHIBITED/REJECTED/ACCEPTED）
-│       ├── hailo_runtime.py  # 位姿估计器真实的 HailoRT(hailo_platform)集成边界,延迟导入
-│       ├── api.py            # 简洁的 JSON/HTTP 接口(基于 stdlib http.server),桥接 correct/request
-│       ├── main.py           # CLI 入口点（裸调用 + `correct` + `request`）
-│       ├── access.py         # HTTP API 的可选 Bearer 令牌 (本机回环无需,非回环时必须)
-│       └── limits.py         # 服务强制执行的限值,启动时固定 (调用方可要求更严,不可更松)
-├── tests/               # 真实 pytest 套件（pose、servo、authorization、hailo_runtime、api、CLI）
-├── docs/                # 文档与运动学理论
-├── build/               # 构建输出（本地 .venv 也存放于此）
-├── images/              # 媒体与图表
-├── systemd/
-│   └── hydra-umc-visual-servoing-api.service # 本地 CM5 PBVS 修正 API 的 systemd 单元
-├── tools/
-│   ├── build_test.py    # 不递增版本号的构建检查
-│   ├── ci_validate.py   # CI 使用的清单/CHANGELOG/文档校验
-│   ├── _doc_policy.py   # 家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
-│   ├── _readme_parity.py # 检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
-│   └── hydra_project_tool.py # 每个仓库相同的命令: validate、test、ci、version、status、bump
-├── pyproject.toml       # 包元数据、依赖项、里程表版本号
-├── bump_version.py      # 里程表式版本递增（仅由显式 `bump` 命令运行）
-├── bump_manifest_version.py # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)
-├── build.sh / build.bat # venv + 可编辑安装 + 编译检查 + 测试
-├── build-test.sh / build-test.bat # 不递增版本号的构建检查
-└── run.sh / run.bat     # 从本地 venv 运行入口点
+```bash
+./build.sh  # Linux, macOS (build.bat on Windows)
+./run.sh correct --current 0.10,0.20,0.30,0.0,0.0,0.0 --target 0.15,0.20,0.25,0.0,0.0,0.10
+./run.sh serve --port 8106
 ```
 
----
+## 🧪 测试
 
-## 🏗️ 构建与运行
+运行 `python -m pytest -q tests` 会执行 172 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
+
+CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
+
+## 🏗️ 构建与发布
 
 需要 Python 3.10+。
 
@@ -182,9 +172,48 @@ run.bat
 # outcome : REJECTED - confidence 0.2 is below the required minimum 0.6 for frame 'cam0-f42'   （退出码 1）
 ```
 
----
+## 📂 仓库结构
 
-## ✅ 当前状态与后续步骤
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Repository structure of HYDRA-UMC-VISUAL-SERVOING-API" width="100%">
+</p>
+
+<details>
+<summary>目录树的文本版本</summary>
+
+```text
+HYDRA-UMC-VISUAL-SERVOING-API/
+├── tools/                           源代码
+│   ├── build_test.py                不递增版本号的构建检查
+│   ├── ci_validate.py               CI 使用的清单/CHANGELOG/文档校验
+│   ├── _doc_policy.py               家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
+│   ├── _readme_parity.py            检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
+│   └── hydra_project_tool.py        每个仓库相同的命令: validate、test、ci、version、status、bump
+├── src/                             源代码（hydra_umc_visual_servoing_api 包）
+├── tests/                           真实 pytest 套件（pose、servo、authorization、hailo_runtime、api、CLI）
+├── docs/                            文档与运动学理论
+├── images/                          媒体与图表
+├── systemd/                         服务单元
+├── .github/                         CI 工作流和 Issue 模板
+├── pyproject.toml                   包的元数据
+├── bump_version.py                  显式提升版本
+├── bump_manifest_version.py         将 hydra-umc.project.json 的版本与原生版本同步(--sync)
+├── build.sh / build.bat             venv + 可编辑安装 + 编译检查 + 测试
+├── build-test.sh / build-test.bat   不递增版本号的构建检查
+├── run.sh / run.bat                 从本地 venv 运行入口点
+├── CHANGELOG.md                     每个版本的变更
+├── Dockerfile                       容器镜像
+├── hydra-umc.project.json           清单：版本、成熟度、系列
+└── test.sh                          运行测试
+```
+
+</details>
+
+## 🗺️ 路线图与已知限制
+
+**当前已知限制**
+
+### 当前状态与后续步骤
 
 **今天的真实进展：** PBVS 位姿误差与速度指令修正律（`pose.py`、
 `servo.py`）——上方回路图中的“误差计算（位姿增量）”步骤——附带一个
@@ -199,13 +228,16 @@ run.bat
 以及一块连接好的物理 Hailo-8 NPU;而将计算出的速度指令以低延迟通过
 gRPC 传输至 HYDRA-UMC 核心则是另一项独立的未来工作。
 
-## 🚀 路线图
+### 路线图
+
 * **第一阶段：** 针对 8 路 USB 3.0 画面的多摄像头流水线同步与标定。
 * **第二阶段：** 迁移至 YOLOv11 并针对工业组件检测进行 Hailo-8L 优化。
 * **第三阶段：** 基于立体视觉节点的实时 3D 重建以及安全区域动态映射。
 * **第四阶段：** 支持 9 自由度视觉跟踪（包括姿态冗余）以及亚微米级修正。
 
----
+## 🌍 语言
+
+本 README 和仓库文档提供八种语言：英语、西班牙语、德语、法语、意大利语、日语、中文和葡萄牙语（葡萄牙）。它们同时编写，并由 CI 检查八个文件拥有相同的章节和相同的链接。 本仓库没有自己的界面或消息目录，因此没有需要翻译的界面文字。
 
 ## 🔗 相关项目
 
@@ -298,22 +330,27 @@ gRPC 传输至 HYDRA-UMC 核心则是另一项独立的未来工作。
 - **[HYDRA-UMC-OPS-AGENT](https://github.com/JuanenRac/HYDRA-UMC-OPS-AGENT)** — 维护事件协调器：一个低权限的边缘角色采集经过脱敏的库存/健康快照，一个控制面角色以只读方式渲染它，并请求某个 AI 提供方给出诊断建议——从不应用补丁，也从不部署任何内容。
 - **[HYDRA-UMC-DEV-SERVER](https://github.com/JuanenRac/HYDRA-UMC-DEV-SERVER)** — 可复现的开发主机（Raspberry Pi 5 / CM5），保存整个生态系统的源代码，并在持久队列下运行有界的构建/测试任务；这是专用的开发角色，明确区别于运行中的 CM5。
 
+## 📚 文档
 
----
+更多阅读：
 
-## 📚 文档与社区
+* **[docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md)** — 每一次 `correct`/`request`/`serve` 调用、从已安装 CLI 运行中捕获的真实输出、退出码表，以及 `POST /correct`/`POST /request`/`GET /stats` 的 HTTP JSON 契约。
+* [生态系统的安全基线](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)
+* [生态系统的威胁模型](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)
+* [本仓库的更新日志](CHANGELOG.md)
+* [本仓库的许可证](LICENSE.md)
 
-- **[docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md)** — 每一次 `correct`/`request`/`serve` 调用、从已安装 CLI 运行中捕获的真实输出、退出码表，以及 `POST /correct`/`POST /request`/`GET /stats` 的 HTTP JSON 契约。
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** —— 提交 Pull Request 所需的技术栈和编码规范。
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** —— 本社区所期望的行为准则。
-- **[SECURITY.md](SECURITY.md)** —— 如何报告漏洞，以及本项目真实的安全关注重点。
-- **[SUPPORT.md](SUPPORT.md)** —— 在哪里提问和报告缺陷。
-- **[LICENSE.md](LICENSE.md)** —— 本项目自身的许可证。
+## 🤝 参与贡献与社区
+
+* 提交 pull request 之前，请运行 `HYDRA_UMC_CI=1 py -3 tools/ci_validate.py`（或 `HYDRA_UMC_CI=1 python3 tools/ci_validate.py`）：它必须输出 `CI_VALIDATION=PASS`。此检查不要运行 `build.sh` 或 `build.bat`；构建不是检查。
+* 八个 README 由 HYDRA-UMC-DOCS 中的同一个源生成；请勿手工编辑。修改源文件，再用 `tools/make_readmes.py` 重新生成。
+* 不要在 README 中声称尚未运行过的内容：属实时请写“仅模拟”或“尚未在硬件上试过”。
+* 请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)、[行为准则](CODE_OF_CONDUCT.md)、[SECURITY.md](SECURITY.md) 和 [SUPPORT.md](SUPPORT.md)。
 
 ## 👤 作者
-**JuanenRac** (Electro Hobby 3D)
-📧 electrohobby3d@gmail.com
-📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
+
+**JuanenRac (Electro Hobby 3D)** · electrohobby3d@gmail.com
 
 ## 📜 许可证
-GPL-3.0-or-later —— 详见 LICENSE。
+
+GPL-3.0-or-later - [LICENSE](LICENSE).
