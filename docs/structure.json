@@ -263,6 +263,29 @@
           }
         },
         {
+          "name": "configs/",
+          "desc": {
+            "en": "configuration of the orientation error",
+            "es": "configuración del error de orientación",
+            "de": "Konfiguration des Orientierungsfehlers",
+            "fr": "configuration de l'erreur d'orientation",
+            "it": "configurazione dell'errore di orientamento",
+            "ja": "姿勢誤差の設定",
+            "zh": "姿态误差配置",
+            "pt": "configuração do erro de orientação"
+          },
+          "tree_desc": {
+            "en": "configuration of the orientation error",
+            "es": "configuración del error de orientación",
+            "de": "Konfiguration des Orientierungsfehlers",
+            "fr": "configuration de l'erreur d'orientation",
+            "it": "configurazione dell'errore di orientamento",
+            "ja": "姿勢誤差の設定",
+            "zh": "姿态误差配置",
+            "pt": "configuração do erro de orientação"
+          }
+        },
+        {
           "name": "systemd/",
           "desc": {
             "en": "service unit",

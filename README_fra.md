@@ -198,6 +198,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 ├── tests/                           Suite pytest réelle (pose, servo, authorization, hailo_runtime, api, CLI)
 ├── docs/                            Documentation et théorie cinématique
 ├── images/                          Médias et diagrammes
+├── configs/                         configuration de l'erreur d'orientation
 ├── systemd/                         unité de service
 ├── .github/                         workflow de CI et modèles de tickets
 ├── pyproject.toml                   Métadonnées du paquet, dépendances, version compteur

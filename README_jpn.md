@@ -197,6 +197,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 ├── tests/                           実際の pytest スイート（pose、servo、authorization、hailo_runtime、api、CLI）
 ├── docs/                            ドキュメントと運動学理論
 ├── images/                          メディアと図表
+├── configs/                         姿勢誤差の設定
 ├── systemd/                         サービスユニット
 ├── .github/                         CI ワークフローと Issue テンプレート
 ├── pyproject.toml                   パッケージのメタデータ
