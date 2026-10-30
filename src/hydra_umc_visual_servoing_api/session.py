@@ -25,6 +25,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .orientation import active_policy
 from .pose import Pose6D
 from .servo import PoseError, VelocityCommand, compute_pose_error, compute_velocity_command
 
@@ -118,6 +119,14 @@ class ServoSession:
         if previous is None:
             return measured
         a = self.config.filter_alpha
+        if active_policy().error == "quaternion":
+            blended = previous.quaternion.blend(measured.quaternion, a)
+            return Pose6D.from_quaternion(
+                previous.x + a * (measured.x - previous.x),
+                previous.y + a * (measured.y - previous.y),
+                previous.z + a * (measured.z - previous.z),
+                blended,
+            )
         return Pose6D(
             x=previous.x + a * (measured.x - previous.x),
             y=previous.y + a * (measured.y - previous.y),

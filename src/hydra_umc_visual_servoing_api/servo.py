@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .orientation import OrientationPolicy, active_policy
 from .pose import Pose6D
 
 
@@ -55,6 +56,13 @@ class PoseError:
     dyaw: float
 
     @property
+    def rotation_vector(self) -> tuple[float, float, float]:
+        """The orientation error as an angular velocity direction (axis times angle, radians). With the quaternion
+        error these are the same three numbers as `droll`, `dpitch` and `dyaw`, whose names are obsolete: they are
+        the components about the x, y and z axes of the declared frame, not differences of Euler angles."""
+        return (self.droll, self.dpitch, self.dyaw)
+
+    @property
     def linear_norm(self) -> float:
         # math.hypot (not sqrt(sum(c**2))) - squaring a
         # perfectly finite but extreme component (e.g. ~1e200) overflows
@@ -68,15 +76,28 @@ class PoseError:
         return math.hypot(self.droll, self.dpitch, self.dyaw)
 
 
-def compute_pose_error(current: Pose6D, target: Pose6D) -> PoseError:
-    """target - current, with angular components wrapped to the shortest turn."""
+def compute_pose_error(current: Pose6D, target: Pose6D, orientation: OrientationPolicy | None = None) -> PoseError:
+    """target - current for the position; for the orientation, the rotation that takes the current orientation to
+    the target one by the shortest way (a rotation vector, see `orientation.py` for the frame and for the earlier
+    Euler difference that the configuration can still ask for)."""
+    policy = orientation if orientation is not None else active_policy()
+    if policy.error == "euler":
+        angular = (
+            _wrap_angle_diff(target.roll, current.roll),
+            _wrap_angle_diff(target.pitch, current.pitch),
+            _wrap_angle_diff(target.yaw, current.yaw),
+        )
+    else:
+        q_current, q_target = current.quaternion, target.quaternion
+        delta = (q_target * q_current.conjugate()) if policy.frame == "base" else (q_current.conjugate() * q_target)
+        angular = delta.to_rotation_vector()
     error = PoseError(
         dx=target.x - current.x,
         dy=target.y - current.y,
         dz=target.z - current.z,
-        droll=_wrap_angle_diff(target.roll, current.roll),
-        dpitch=_wrap_angle_diff(target.pitch, current.pitch),
-        dyaw=_wrap_angle_diff(target.yaw, current.yaw),
+        droll=angular[0],
+        dpitch=angular[1],
+        dyaw=angular[2],
     )
     # current/target are each individually guaranteed finite
     # (Pose6D.parse's own isfinite check), but subtracting two

@@ -39,6 +39,7 @@ from .limits import (
     DEFAULT_VALID_FOR_MS,
     ServoLimits,
 )
+from .orientation import OrientationConfigError, load_orientation_policy, set_active_policy
 from .pose import Pose6D, PoseParseError
 from .safety_source import DEFAULT_TIMEOUT_MS, SafetyZonesClient
 from .servo import compute_pose_error, compute_velocity_command, is_converged
@@ -60,7 +61,19 @@ def get_version() -> str:
         return "0.0.0-dev (package not installed - run build.sh/build.bat first)"
 
 
+def _apply_config(args: argparse.Namespace) -> bool:
+    """Read the orientation settings of the configuration file; False (after the message) when they cannot be used."""
+    try:
+        set_active_policy(load_orientation_policy(args.config))
+    except OrientationConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return False
+    return True
+
+
 def _cmd_correct(args: argparse.Namespace) -> int:
+    if not _apply_config(args):
+        return 2
     try:
         current = Pose6D.parse(args.current)
         target = Pose6D.parse(args.target)
@@ -90,6 +103,8 @@ def _cmd_correct(args: argparse.Namespace) -> int:
 
 
 def _cmd_request(args: argparse.Namespace) -> int:
+    if not _apply_config(args):
+        return 2
     try:
         current = Pose6D.parse(args.current)
         target = Pose6D.parse(args.target)
@@ -139,6 +154,8 @@ def _cmd_request(args: argparse.Namespace) -> int:
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
+    if not _apply_config(args):
+        return 2
     try:
         limits = ServoLimits(
             min_confidence=args.min_confidence,
@@ -216,6 +233,7 @@ def _build_parser() -> argparse.ArgumentParser:
                           help="Linear convergence tolerance in meters (default: 0.001)")
     correct.add_argument("--angular-tol", type=float, default=0.01, dest="angular_tol",
                           help="Angular convergence tolerance in radians (default: 0.01)")
+    correct.add_argument("--config", default=None, help="Configuration file with how the orientation error is computed (default: the file named by HYDRA_UMC_VISUAL_SERVOING_CONFIG, else quaternion error in the base frame)")
     correct.set_defaults(func=_cmd_correct)
 
     request = subparsers.add_parser(
@@ -244,6 +262,7 @@ def _build_parser() -> argparse.ArgumentParser:
                           help=f"Clamp the linear velocity command's norm in m/s (default: {DEFAULT_MAX_LINEAR_SPEED})")
     request.add_argument("--max-angular-speed", type=float, default=DEFAULT_MAX_ANGULAR_SPEED, dest="max_angular_speed",
                           help=f"Clamp the angular velocity command's norm in rad/s (default: {DEFAULT_MAX_ANGULAR_SPEED})")
+    request.add_argument("--config", default=None, help="Configuration file with how the orientation error is computed (default: the file named by HYDRA_UMC_VISUAL_SERVOING_CONFIG, else quaternion error in the base frame)")
     request.set_defaults(func=_cmd_request)
 
     serve = subparsers.add_parser(
@@ -279,6 +298,7 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="file with the bearer token of SAFETY-ZONES (or HYDRA_UMC_SAFETY_ZONES_TOKEN)")
     serve.add_argument("--safety-zones-timeout-ms", type=float, default=DEFAULT_TIMEOUT_MS, dest="safety_zones_timeout_ms",
                        help=f"how long to wait for SAFETY-ZONES, ms (default: {DEFAULT_TIMEOUT_MS:g})")
+    serve.add_argument("--config", default=None, help="Configuration file with how the orientation error is computed (default: the file named by HYDRA_UMC_VISUAL_SERVOING_CONFIG, else quaternion error in the base frame)")
     serve.set_defaults(func=_cmd_serve)
 
     return parser
