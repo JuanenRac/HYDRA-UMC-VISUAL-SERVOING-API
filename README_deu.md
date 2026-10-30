@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-208%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.1` |
 | Reifegrad | Funktionsfähig |
-| Tests | 194 (`python -m pytest -q tests`) |
+| Tests | 208 (`python -m pytest -q tests`) |
 | Technik | Python / 6-DOF pose estimation |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -51,7 +51,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Funktioniert für seinen Hauptzweck; die Ehrlichkeitsprüfung oben nennt, was noch fehlt |
-| Tests | 🟢 | 194 automatische Tests, bei jeder Änderung ausgeführt |
+| Tests | 🟢 | 208 automatische Tests, bei jeder Änderung ausgeführt |
 | Echte Hardware | 🔴 | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
 | Dokumentation | 🟢 | README in acht Sprachen, bei jeder Änderung gegen das Manifest geprüft |
 
@@ -67,6 +67,7 @@ Es ist dafür ausgelegt, sowohl **Eye-in-Hand**- (Kamera am Werkzeug) als auch *
 * 🛡️ **Echtes v0 - sicherheitsgesperrte Autorisierung:** `authorization.py` verweigert die Umwandlung von Wahrnehmung in Bewegung, es sei denn, der vorgelagerte Sicherheitszustand ist `READY` und die visuellen Daten sind frisch/vertrauenswürdig genug. Über den neuen Unterbefehl `request` verfügbar - keine Kamera, NPU oder SAFETY-ZONES-Prozess nötig, um es auszuführen oder zu testen.
 * 🌐 **JSON/HTTP-API (v0):** der echte Unterbefehl `serve` stellt dieselbe `correct`/`request`-Logik als `POST /correct`/`POST /request` bereit (plus `GET /stats`), über das `http.server`-Modul der Standardbibliothek ohne zusätzliche Abhängigkeit - erreichbar von einem echten Aufrufer statt über einmalige CLI-Argumente. Siehe [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md).
 * 🔁 **Servo-Sitzungen (die Schleife mit Gedächtnis):** `POST /sessions` öffnet eine Sitzung mit nominaler Periode, Verstärkung, Filter auf der gemessenen Pose, Totzone mit Hysterese, Beschleunigungsgrenzen und Sichtzeitlimit; `POST /sessions/<id>/correct` (oder `/request`, das durch dasselbe Sicherheitstor wie `POST /request` geht) macht einen Schritt, `POST /sessions/<id>/vision-lost` meldet eine verlorene Erkennung und `DELETE /sessions/<id>` schließt sie. Eine Verstärkung, deren `K*T` über 0,5 liegt, wird beim Öffnen abgelehnt (die Schleife ist ein Integrator: sie braucht `K*T` unter 1, um ohne Überschwingen, und unter 2, um überhaupt zu konvergieren), eine Pause über dem Zeitlimit oder ein nicht autorisierter Befehl lässt den nächsten Befehl aus der Ruhe starten, und eine Sitzung darf weniger verlangen als die Grenzen des Dienstes erlauben, nie mehr. Gegen eine simulierte Strecke mit Verzögerung und Rauschen getestet (`tests/test_session.py`); nie mit einem echten Werkzeug.
+* 🛡️ **Sicherheitszustand vom Sicherheitsdienst abgefragt:** `serve --safety-zones-url URL` (oder `HYDRA_UMC_SAFETY_ZONES_URL`, Token in `--safety-zones-token-file`) lässt den Dienst das jüngste Urteil von HYDRA-UMC-SAFETY-ZONES lesen (`GET /state`) und das vom Aufrufer gesendete `safety_state` ignorieren. Eine Anfrage muss dann `captured_at_utc` enthalten, und der Dienst berechnet das Alter der Erkennung selbst. Keine Antwort, ein altes Urteil oder ein Fehler bedeutet `INHIBITED`. Standardmäßig aus; dann sendet der Aufrufer das SafetyState-Objekt mit Zeit. Gegen einen Ersatzdienst getestet, nie an einer echten Zelle.
 * 🔄 **Closed-Loop-Steuerung:** Kontinuierliche Feedbackschleife, die den High-Level-Orchestrator für niedrige Latenz umgeht. *(Architekturziel - die gRPC-Übertragung an den HYDRA-UMC-Kern ist noch zukünftige Arbeit.)*
 * 📐 **Pose-Schätzung:** 6-DOF-Objektpose-Schätzung aus Einzel- oder Multi-Kamera-Ansichten. *(zukünftige Arbeit - benötigt die echte Hailo-8-NPU, die diese Umgebung noch nicht hat.)*
 * ⚡ **Hardware-beschleunigt:** Verwendet den Hailo-8-Ausgang für die sofortige Koordinatenberechnung. *(zukünftige Arbeit, gleicher Grund.)*
@@ -120,7 +121,7 @@ Benötigt Python 3.10 oder neuer.
 
 ## 🧪 Tests
 
-194 automatische Tests laufen mit `python -m pytest -q tests`. Sie brauchen weder Hardware noch etwas außerhalb dieses Rechners.
+208 automatische Tests laufen mit `python -m pytest -q tests`. Sie brauchen weder Hardware noch etwas außerhalb dieses Rechners.
 
 Die CI führt `HYDRA_UMC_CI=1 python tools/ci_validate.py` aus; das prüft das Manifest, die Dokumente, die acht READMEs und die Bilder.
 
@@ -227,7 +228,7 @@ nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 `READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
 über den `request`-CLI-Befehl; sowie eine echte HailoRT-Integrationsgrenze
 (`hailo_runtime.py`), bereit für einen echten Hailo-8-Pose-Schätzer, sobald
-dieser angeschlossen wird. Insgesamt 194 Tests.
+dieser angeschlossen wird. Insgesamt 208 Tests.
 
 **Noch offen, blockiert durch echte Hardware:** die
 6-Freiheitsgrad-Posen-*schätzung* tatsächlich über `hailo_runtime.py`

@@ -30,6 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from .access import authorized, reject
+from .safety_source import SafetyZonesClient
 from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
 from datetime import datetime, timezone
 
@@ -302,11 +303,43 @@ class Handler(BaseHTTPRequestHandler):
         return payload
 
     def _safety_state(self, body: dict) -> tuple[str, str | None]:
+        client = self.server.safety_zones
+        if client is not None:
+            # the caller's own claim is ignored: the verdict is SAFETY-ZONES's, with the time it was reached
+            state, why = client.latest_state()
+            if state is None:
+                return "INHIBITED", why
+            return resolve_safety_state(
+                state, max_age_ms=self.server.limits.max_safety_age_ms, accept_legacy_string=False
+            )
         return resolve_safety_state(
             body["safety_state"],
             max_age_ms=self.server.limits.max_safety_age_ms,
             accept_legacy_string=self.server.accept_legacy_safety_string,
         )
+
+    def _data_age_ms(self, body: dict) -> float:
+        """How old the detection is. With a captured_at_utc the service computes the age itself and never trusts
+        a smaller one the caller declares; with SAFETY-ZONES configured the capture time is required."""
+        declared = _number(body, "data_age_ms", None)
+        stamp = body.get("captured_at_utc")
+        if stamp is None:
+            if self.server.safety_zones is not None or declared is None:
+                raise KeyError("captured_at_utc" if self.server.safety_zones is not None else "data_age_ms")
+            return declared
+        if not isinstance(stamp, str):
+            raise ValueError("captured_at_utc must be an ISO-8601 string")
+        try:
+            moment = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        except ValueError:
+            raise ValueError("captured_at_utc is not an ISO-8601 time") from None
+        if moment.tzinfo is None:
+            raise ValueError("captured_at_utc has no time zone")
+        age_ms = (datetime.now(timezone.utc) - moment).total_seconds() * 1000.0
+        if age_ms < -SAFETY_CLOCK_SKEW_MS:
+            raise ValueError("captured_at_utc is in the future")
+        age_ms = max(age_ms, 0.0)
+        return age_ms if declared is None else max(age_ms, declared)
 
     # ---- sessions: the loop with memory (see session.py) ----
 
@@ -368,7 +401,7 @@ class Handler(BaseHTTPRequestHandler):
                     target=target,
                     frame_id=str(body["frame_id"]),
                     confidence=_number(body, "confidence", REQUIRED),
-                    data_age_ms=_number(body, "data_age_ms", REQUIRED),
+                    data_age_ms=self._data_age_ms(body),
                     safety_state=safety_state,
                     calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
                     calibration_age_days=_number(body, "calibration_age_days", None),
@@ -461,7 +494,7 @@ class Handler(BaseHTTPRequestHandler):
                 target=target,
                 frame_id=str(body["frame_id"]),
                 confidence=_number(body, "confidence", REQUIRED),
-                data_age_ms=_number(body, "data_age_ms", REQUIRED),
+                data_age_ms=self._data_age_ms(body),
                 safety_state=safety_state,
                 calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
                 calibration_age_days=_number(body, "calibration_age_days", None),
@@ -519,8 +552,11 @@ class VisualServoingServer(ThreadingHTTPServer):
         limits: ServoLimits | None = None,
         token: str = "",
         accept_legacy_safety_string: bool | None = None,
+        safety_zones: SafetyZonesClient | None = None,
     ) -> None:
         super().__init__(address, Handler)
+        # when set, the safety state is asked of SAFETY-ZONES and what the caller says is ignored
+        self.safety_zones = safety_zones
         self.accept_legacy_safety_string = (
             DEFAULT_ACCEPT_LEGACY_SAFETY_STRING if accept_legacy_safety_string is None else accept_legacy_safety_string
         )

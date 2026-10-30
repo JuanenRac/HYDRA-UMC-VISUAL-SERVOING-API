@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-208%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | 版本 | `0.2.1` |
 | 成熟度 | 可用 |
-| 测试 | 194 (`python -m pytest -q tests`) |
+| 测试 | 208 (`python -m pytest -q tests`) |
 | 技术栈 | Python / 6-DOF pose estimation |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 194 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 208 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 文档 | 🟢 | 八种语言的 README，每次变更都会与清单核对 |
 
@@ -67,6 +67,7 @@ GPL-3.0-or-later - see LICENSE
 * 🛡️ **真实 v0 —— 安全联锁授权：** `authorization.py` 拒绝将感知转化为运动，除非上游安全状态为 `READY` 且视觉数据足够新鲜/可信。通过下面的新 `request` 子命令暴露——运行或测试都不需要摄像头、NPU 或 SAFETY-ZONES 进程。
 * 🌐 **JSON/HTTP API（v0）：** 真实的 `serve` 子命令把同样的 `correct`/`request` 逻辑以 `POST /correct`/`POST /request`（以及 `GET /stats`）的形式对外提供，使用标准库的 `http.server`，无需额外依赖——可被真实调用方访问，而不再局限于一次性的命令行参数。详见 [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md)。
 * 🔁 **伺服会话(带记忆的回路):** `POST /sessions` 打开一个会话，包含公称周期、增益、对测量位姿的滤波、带迟滞的死区、加速度限制和视觉丢失超时；`POST /sessions/<id>/correct`(或与 `POST /request` 经过同一道安全闸门的 `/request`)推进一步，`POST /sessions/<id>/vision-lost` 报告检测丢失，`DELETE /sessions/<id>` 关闭会话。`K*T` 超过 0.5 的增益在打开会话时被拒绝(回路是积分器：`K*T` 低于 1 才能无超调收敛，低于 2 才能收敛)；超过超时的停顿或未获授权的指令会使下一条指令从静止开始；会话可以要求比服务限制更小的值，绝不能更大。已在带延迟和噪声的模拟对象上测试(`tests/test_session.py`)，从未用于真实工具。
+* 🛡️ **向安全服务查询安全状态：** `serve --safety-zones-url URL`（或 `HYDRA_UMC_SAFETY_ZONES_URL`，令牌放在 `--safety-zones-token-file`）会让服务读取 HYDRA-UMC-SAFETY-ZONES 的最新判定（`GET /state`），并忽略调用方发送的 `safety_state`。此时请求必须带 `captured_at_utc`，检测的时效由服务自己计算。无响应、判定过旧或出错都视为 `INHIBITED`。默认关闭，此时由调用方发送带时间的 SafetyState 对象。已针对替代服务测试，从未在真实工作单元上验证。
 * 🔄 **闭环控制：** 持续反馈回路，绕过高层编排器以降低延迟。*（架构目标——向 HYDRA-UMC 核心的 gRPC 传输仍是未来工作。）*
 * 📐 **位姿估计：** 从单摄像头或多摄像头视角进行 6 自由度物体位姿估计。*（未来工作——需要本环境尚不具备的真实 Hailo-8 NPU。）*
 * ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。*（未来工作，原因相同。）*
@@ -120,7 +121,7 @@ flowchart LR
 
 ## 🧪 测试
 
-运行 `python -m pytest -q tests` 会执行 194 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
+运行 `python -m pytest -q tests` 会执行 208 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
 
 CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
 
@@ -222,7 +223,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 除非上游安全状态为 `READY` 且数据足够可信/新鲜，否则拒绝将视觉检测
 结果转化为运动，通过 `request` CLI 命令暴露;以及一个真实的 HailoRT 集成边界
 (`hailo_runtime.py`),已准备好在真实的 Hailo-8 姿态估计器接入的那一刻使用。
-共计 194 个测试。
+共计 208 个测试。
 
 **仍待完成，受限于真实硬件：** 要真正通过 `hailo_runtime.py` 运行 6 自由度
 位姿*估计*,需要一个真实编译好的姿态估计 `.hef`(目前尚未选定具体模型)

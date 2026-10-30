@@ -246,7 +246,9 @@ process: `--min-confidence` (0.6), `--max-data-age-ms` (200), `--max-calibration
 `--max-angular-speed` (0.5 rad/s) and `--valid-for-ms` (250). A request may ask
 for something stricter in its own body; asking for something looser answers `400`.
 
-In the body of `POST /request` and of a session's `request` step, `safety_state` is the SafetyState object (`state` and `timestamp_utc`, as `GET`/`POST /check` of the safety zones service returns it in `sdkSafetyState`). The service answers `INHIBITED` when the object has no time, a time in an unknown format or in the future, or is older than `--max-safety-age-ms` (1000); a bare string such as `"READY"` is also `INHIBITED` unless the service was started with `--accept-legacy-safety-string` (off by default). Nothing here asks the safety zones service itself: the time only keeps an old answer from being reused.
+In the body of `POST /request` and of a session's `request` step, `safety_state` is the SafetyState object (`state` and `timestamp_utc`, as `GET`/`POST /check` of the safety zones service returns it in `sdkSafetyState`). The service answers `INHIBITED` when the object has no time, a time in an unknown format or in the future, or is older than `--max-safety-age-ms` (1000); a bare string such as `"READY"` is also `INHIBITED` unless the service was started with `--accept-legacy-safety-string` (off by default).
+
+With `--safety-zones-url URL` (or `HYDRA_UMC_SAFETY_ZONES_URL`; token in `--safety-zones-token-file` or `HYDRA_UMC_SAFETY_ZONES_TOKEN`; wait in `--safety-zones-timeout-ms`, 500) the service asks the safety zones service for its latest verdict (`GET /state`) and ignores the `safety_state` of the request. The verdict is judged with the same age limit; no answer, an error, an unusable body or an old verdict is `INHIBITED`. The request must then carry `captured_at_utc` (ISO-8601 with a zone): the service computes the age of the detection from it and never takes a smaller `data_age_ms` the caller declares. Without the option the behaviour above applies.
 
 **`GET /stats`** — `{"role": "<the project's own role string>"}`, `200`.
 

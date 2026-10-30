@@ -16,7 +16,9 @@ hardware and land later.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+from pathlib import Path
 from importlib.metadata import PackageNotFoundError, version
 
 from .access import bind_problem, load_token
@@ -38,6 +40,7 @@ from .limits import (
     ServoLimits,
 )
 from .pose import Pose6D, PoseParseError
+from .safety_source import DEFAULT_TIMEOUT_MS, SafetyZonesClient
 from .servo import compute_pose_error, compute_velocity_command, is_converged
 
 PROJECT_NAME = "HYDRA-UMC-VISUAL-SERVOING-API"
@@ -159,9 +162,23 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     if problem:
         print(f"error: {problem}", file=sys.stderr)
         return 2
+    zones_url = args.safety_zones_url or os.environ.get("HYDRA_UMC_SAFETY_ZONES_URL", "")
+    zones_client = None
+    if zones_url.strip():
+        try:
+            zones_token = os.environ.get("HYDRA_UMC_SAFETY_ZONES_TOKEN", "").strip()
+            if args.safety_zones_token_file:
+                zones_token = Path(args.safety_zones_token_file).read_text(encoding="utf-8").strip()
+            zones_client = SafetyZonesClient(zones_url, zones_token, args.safety_zones_timeout_ms)
+        except (ValueError, OSError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     server = VisualServoingServer(
-        (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string
+        (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string,
+        safety_zones=zones_client,
     )
+    if zones_client is not None:
+        print(f"[visual-servoing-api] the safety state is asked of SAFETY-ZONES at {zones_client.base_url}; what a caller says about it is ignored, and a request needs captured_at_utc")
     print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port} ({'Bearer token required' if token else 'no token, loopback only'})")
     print(
         f"[visual-servoing-api] limits fixed at start-up (a request can only tighten them): "
@@ -256,6 +273,12 @@ def _build_parser() -> argparse.ArgumentParser:
                        help=f"Oldest SafetyState (by its timestamp_utc) a correction may rely on, ms (default: {DEFAULT_MAX_SAFETY_AGE_MS})")
     serve.add_argument("--accept-legacy-safety-string", action="store_true", dest="accept_legacy_safety_string",
                        help="believe a bare safety_state string such as \"READY\" (no time) as before; off by default, when only the SafetyState object with a recent timestamp_utc can authorize a correction")
+    serve.add_argument("--safety-zones-url", default=None, dest="safety_zones_url",
+                       help="address of HYDRA-UMC-SAFETY-ZONES (or HYDRA_UMC_SAFETY_ZONES_URL): the service then asks it for the latest verdict (GET /state) and ignores the safety_state a caller sends; no answer, an old one or an error is INHIBITED. Off by default, when the caller sends the SafetyState object")
+    serve.add_argument("--safety-zones-token-file", default=None, dest="safety_zones_token_file",
+                       help="file with the bearer token of SAFETY-ZONES (or HYDRA_UMC_SAFETY_ZONES_TOKEN)")
+    serve.add_argument("--safety-zones-timeout-ms", type=float, default=DEFAULT_TIMEOUT_MS, dest="safety_zones_timeout_ms",
+                       help=f"how long to wait for SAFETY-ZONES, ms (default: {DEFAULT_TIMEOUT_MS:g})")
     serve.set_defaults(func=_cmd_serve)
 
     return parser

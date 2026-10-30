@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-208%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | バージョン | `0.2.1` |
 | 成熟度 | 機能する |
-| テスト | 194 (`python -m pytest -q tests`) |
+| テスト | 208 (`python -m pytest -q tests`) |
 | 技術 | Python / 6-DOF pose estimation |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | 主な目的では動作します。足りない点は上の正直さの確認に書かれています |
-| テスト | 🟢 | 自動テスト 194 件。変更のたびに実行されます |
+| テスト | 🟢 | 自動テスト 208 件。変更のたびに実行されます |
 | 実機 | 🔴 | まだです：このバージョンについて実機での動作記録はありません |
 | ドキュメント | 🟢 | 8 言語の README。変更のたびにマニフェストと照合されます |
 
@@ -67,6 +67,7 @@ GPL-3.0-or-later - see LICENSE
 * 🛡️ **実装済み v0 —— セーフティゲート付き認可：** `authorization.py` は、上流の安全状態が `READY` であり、かつ視覚データが十分に新しく信頼できる場合を除き、知覚を運動に変換することを拒否します。下記の新しい `request` サブコマンドから利用可能で、実行にもテストにもカメラ、NPU、SAFETY-ZONES プロセスは不要です。
 * 🌐 **JSON/HTTP API（v0）：** 実際の `serve` サブコマンドは、同じ `correct`/`request` ロジックを `POST /correct`/`POST /request`（および `GET /stats`）として公開します。追加の依存関係なしに標準ライブラリの `http.server` を使用し、一度きりの CLI 引数ではなく実際の呼び出し元から到達可能です。[`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) を参照してください。
 * 🔁 **サーボセッション(記憶を持つループ):** `POST /sessions` は、公称周期、ゲイン、計測姿勢のフィルタ、ヒステリシス付き不感帯、加速度の上限、視覚喪失タイムアウトを持つセッションを開きます。`POST /sessions/<id>/correct`(または `POST /request` と同じ安全ゲートを通る `/request`)で 1 ステップ進め、`POST /sessions/<id>/vision-lost` で検出の喪失を伝え、`DELETE /sessions/<id>` で閉じます。`K*T` が 0.5 を超えるゲインはセッションを開くときに拒否されます(ループは積分器なので、オーバーシュートなしに収束するには `K*T` が 1 未満、収束するだけでも 2 未満が必要です)。タイムアウトより長い中断や許可されなかった指令の後は、次の指令が静止状態から始まります。セッションはサービスの上限より小さい値を求められますが、大きい値は求められません。遅れと雑音のある模擬プラントで試験済み(`tests/test_session.py`)、実際の工具では未検証です。
+* 🛡️ **安全状態を安全サービスに問い合わせる:** `serve --safety-zones-url URL`（または `HYDRA_UMC_SAFETY_ZONES_URL`、トークンは `--safety-zones-token-file`）を指定すると、サービスは HYDRA-UMC-SAFETY-ZONES の最新の判定（`GET /state`）を読み、呼び出し側が送る `safety_state` を無視します。リクエストには `captured_at_utc` が必須で、検出の経過時間はサービス自身が計算します。応答なし、古い判定、エラーはいずれも `INHIBITED` です。既定ではオフで、その場合は呼び出し側が時刻付きの SafetyState オブジェクトを送ります。代替サービスに対してテスト済みで、実際のセルでは未検証です。
 * 🔄 **閉ループ制御：** 上位のオーケストレーターを経由しない連続フィードバックループにより低遅延を実現。*（アーキテクチャ上の目標——HYDRA-UMC コアへの gRPC 送信はまだ将来の作業です。）*
 * 📐 **姿勢推定：** 単一または複数カメラビューからの 6 自由度物体姿勢推定。*（将来の作業——この環境にはまだない実際の Hailo-8 NPU が必要です。）*
 * ⚡ **ハードウェアアクセラレーション：** Hailo-8 の出力を使用した即時座標計算。*（同じ理由で将来の作業です。）*
@@ -120,7 +121,7 @@ Python 3.10 以上が必要です。
 
 ## 🧪 テスト
 
-`python -m pytest -q tests` で自動テスト 194 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
+`python -m pytest -q tests` で自動テスト 208 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
 
 CI は `HYDRA_UMC_CI=1 python tools/ci_validate.py` を実行し、マニフェスト、文書、8 つの README、図を検査します。
 
@@ -225,7 +226,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 することを拒否するセーフティゲート付き認可ポリシー（`authorization.py`）を
 `request` CLI コマンドとして実装済み。加えて、実際のHailoRT統合境界
 (`hailo_runtime.py`)も、実際のHailo-8姿勢推定器が接続され次第使える
-ように準備済みです。テストは合計 194 個。
+ように準備済みです。テストは合計 208 個。
 
 **まだ先で、実際のハードウェアに阻まれている：** `hailo_runtime.py` を通じて
 実際に 6 自由度姿勢*推定*を実行するには、実際にコンパイルされた姿勢推定用

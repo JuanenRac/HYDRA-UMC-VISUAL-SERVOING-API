@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The safety state can be asked of the safety zones service:** `serve --safety-zones-url URL` (or `HYDRA_UMC_SAFETY_ZONES_URL`, with `--safety-zones-token-file` and `--safety-zones-timeout-ms`) makes the service read the latest verdict of `HYDRA-UMC-SAFETY-ZONES` (`GET /state`) and ignore the `safety_state` a caller sends; no answer, an old verdict or an error is `INHIBITED`. A request then carries `captured_at_utc` and the service computes the age of the detection itself. Off by default. 14 new tests (208 in all).
+
 ## [0.2.1] - A correction needs a recent safety state and the pose model is built from the verified bytes
 
 - **A correction needs a recent SafetyState object:** `POST /request` and a session's `request` step now read `safety_state` as the SafetyState object (`state` and `timestamp_utc`) and answer `INHIBITED` when it has no time, is malformed, lies in the future or is older than `--max-safety-age-ms` (default 1000). A bare string such as `READY`, which says nothing about when it was true, is refused too unless the service is started with `--accept-legacy-safety-string` (off by default). The checks fail closed: anything unusable is `INHIBITED`, never `READY`.
