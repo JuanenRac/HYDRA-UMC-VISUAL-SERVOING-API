@@ -67,7 +67,7 @@ GPL-3.0-or-later - see LICENSE
 * 🛡️ **真实 v0 —— 安全联锁授权：** `authorization.py` 拒绝将感知转化为运动，除非上游安全状态为 `READY` 且视觉数据足够新鲜/可信。通过下面的新 `request` 子命令暴露——运行或测试都不需要摄像头、NPU 或 SAFETY-ZONES 进程。
 * 🌐 **JSON/HTTP API（v0）：** 真实的 `serve` 子命令把同样的 `correct`/`request` 逻辑以 `POST /correct`/`POST /request`（以及 `GET /stats`）的形式对外提供，使用标准库的 `http.server`，无需额外依赖——可被真实调用方访问，而不再局限于一次性的命令行参数。详见 [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md)。
 * 🔁 **伺服会话(带记忆的回路):** `POST /sessions` 打开一个会话，包含公称周期、增益、对测量位姿的滤波、带迟滞的死区、加速度限制和视觉丢失超时；`POST /sessions/<id>/correct`(或与 `POST /request` 经过同一道安全闸门的 `/request`)推进一步，`POST /sessions/<id>/vision-lost` 报告检测丢失，`DELETE /sessions/<id>` 关闭会话。`K*T` 超过 0.5 的增益在打开会话时被拒绝(回路是积分器：`K*T` 低于 1 才能无超调收敛，低于 2 才能收敛)；超过超时的停顿或未获授权的指令会使下一条指令从静止开始；会话可以要求比服务限制更小的值，绝不能更大。已在带延迟和噪声的模拟对象上测试(`tests/test_session.py`)，从未用于真实工具。
-* 🛡️ **向安全服务查询安全状态：** `serve --safety-zones-url URL`（或 `HYDRA_UMC_SAFETY_ZONES_URL`，令牌放在 `--safety-zones-token-file`）会让服务读取 HYDRA-UMC-SAFETY-ZONES 的最新判定（`GET /state`），并忽略调用方发送的 `safety_state`。此时请求必须带 `captured_at_utc`，检测的时效由服务自己计算。无响应、判定过旧或出错都视为 `INHIBITED`。默认关闭，此时由调用方发送带时间的 SafetyState 对象。已针对替代服务测试，从未在真实工作单元上验证。
+* 🛡️ **向安全服务查询安全状态： (默认关闭)** `serve --safety-zones-url URL`（或 `HYDRA_UMC_SAFETY_ZONES_URL`，令牌放在 `--safety-zones-token-file`）会让服务读取 HYDRA-UMC-SAFETY-ZONES 的最新判定（`GET /state`），并忽略调用方发送的 `safety_state`。此时请求必须带 `captured_at_utc`，检测的时效由服务自己计算。无响应、判定过旧或出错都视为 `INHIBITED`。默认关闭，此时由调用方发送带时间的 SafetyState 对象。已针对替代服务测试，从未在真实工作单元上验证。
 * 🔄 **闭环控制：** 持续反馈回路，绕过高层编排器以降低延迟。*（架构目标——向 HYDRA-UMC 核心的 gRPC 传输仍是未来工作。）*
 * 📐 **位姿估计：** 从单摄像头或多摄像头视角进行 6 自由度物体位姿估计。*（未来工作——需要本环境尚不具备的真实 Hailo-8 NPU。）*
 * ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。*（未来工作，原因相同。）*
