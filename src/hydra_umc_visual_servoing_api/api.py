@@ -31,6 +31,9 @@ from urllib.parse import urlparse
 
 from .access import authorized, reject
 from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
+from datetime import datetime, timezone
+
+from .authorization import SDK_SAFETY_STATES, READY_SAFETY_STATE
 from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
 from .servo import VelocityCommand, compute_pose_error, compute_velocity_command, is_converged
@@ -48,6 +51,12 @@ from .session import (
 
 # Servoing sessions the service keeps at the same time, and how long one may sit unused before it is dropped.
 MAX_SESSIONS = 8
+# A bare safety_state string ("READY") carries no time: it is whatever the caller says, for as long as the caller says it.
+# By default the service wants the SafetyState object with its timestamp and refuses to move on a bare string;
+# the switch below (serve --accept-legacy-safety-string) restores the old behaviour.
+DEFAULT_ACCEPT_LEGACY_SAFETY_STRING = False
+# A timestamp this far in the future (clock skew) is tolerated; further than that it is not a believable reading.
+SAFETY_CLOCK_SKEW_MS = 2000.0
 SESSION_IDLE_SECONDS = 300.0
 
 ZERO_COMMAND = VelocityCommand(vx=0.0, vy=0.0, vz=0.0, wroll=0.0, wpitch=0.0, wyaw=0.0)
@@ -119,6 +128,42 @@ def _read_json_body(handler: BaseHTTPRequestHandler) -> dict:
 
 # GET path the project manifest declares as the health probe; it carries no token
 HEALTH_PATH = "/stats"
+
+
+def resolve_safety_state(raw: object, *, max_age_ms: float, accept_legacy_string: bool, now: datetime | None = None) -> tuple[str, str | None]:
+    """The safety state a correction may be judged with, and why it is not READY when it is not.
+
+    A request that does not carry the SDK SafetyState object (state + timestamp_utc) with a recent timestamp is
+    INHIBITED, never READY: no answer, an old answer or a malformed one all mean "the cell has not confirmed it is
+    safe". A bare string is only believed when the service was started with the legacy switch.
+    """
+    if isinstance(raw, str):
+        if accept_legacy_string:
+            return raw, None
+        return "INHIBITED", (
+            "safety_state is a bare string without a time: send the SafetyState object (state and timestamp_utc) "
+            "or start the service with --accept-legacy-safety-string"
+        )
+    if not isinstance(raw, dict):
+        return "INHIBITED", "safety_state must be the SafetyState object or a string"
+    state = raw.get("state")
+    if not isinstance(state, str) or state not in SDK_SAFETY_STATES:
+        return "INHIBITED", f"safety_state.state must be one of {sorted(SDK_SAFETY_STATES)}"
+    stamp = raw.get("timestamp_utc")
+    if not isinstance(stamp, str):
+        return "INHIBITED", "safety_state carries no timestamp_utc: the cell has not confirmed it is safe now"
+    try:
+        moment = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except ValueError:
+        return "INHIBITED", "safety_state.timestamp_utc is not an ISO-8601 time"
+    if moment.tzinfo is None:
+        return "INHIBITED", "safety_state.timestamp_utc has no time zone"
+    age_ms = ((now or datetime.now(timezone.utc)) - moment).total_seconds() * 1000.0
+    if age_ms > max_age_ms:
+        return "INHIBITED", f"safety_state is {age_ms:.0f} ms old, more than the {max_age_ms:.0f} ms allowed"
+    if age_ms < -SAFETY_CLOCK_SKEW_MS:
+        return "INHIBITED", "safety_state.timestamp_utc is in the future"
+    return state, None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -256,6 +301,13 @@ class Handler(BaseHTTPRequestHandler):
         })
         return payload
 
+    def _safety_state(self, body: dict) -> tuple[str, str | None]:
+        return resolve_safety_state(
+            body["safety_state"],
+            max_age_ms=self.server.limits.max_safety_age_ms,
+            accept_legacy_string=self.server.accept_legacy_safety_string,
+        )
+
     # ---- sessions: the loop with memory (see session.py) ----
 
     def _handle_session_open(self, body: dict) -> None:
@@ -310,13 +362,14 @@ class Handler(BaseHTTPRequestHandler):
             outcome_info = None
             if action == "request":
                 effective = self._effective_limits(body)
+                safety_state, safety_note = self._safety_state(body)
                 request = VisualTargetRequest(
                     current=current,
                     target=target,
                     frame_id=str(body["frame_id"]),
                     confidence=_number(body, "confidence", REQUIRED),
                     data_age_ms=_number(body, "data_age_ms", REQUIRED),
-                    safety_state=str(body["safety_state"]),
+                    safety_state=safety_state,
                     calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
                     calibration_age_days=_number(body, "calibration_age_days", None),
                 )
@@ -332,7 +385,7 @@ class Handler(BaseHTTPRequestHandler):
                     max_angular_speed=session.config.max_angular_speed,
                 )
                 accepted = decision.outcome is RequestOutcome.ACCEPTED
-                reason = decision.reason
+                reason = safety_note if (safety_note and not accepted and decision.outcome is RequestOutcome.INHIBITED) else decision.reason
                 if accepted and not self.server.claim_frame(request.frame_id):
                     accepted, reason = False, f"frame '{request.frame_id}' was already used for a correction"
                 # a decision that was acceptable but lost the claim on its frame is a rejection
@@ -402,13 +455,14 @@ class Handler(BaseHTTPRequestHandler):
         current, target = poses
         try:
             effective = self._effective_limits(body)
+            safety_state, safety_note = self._safety_state(body)
             request = VisualTargetRequest(
                 current=current,
                 target=target,
                 frame_id=str(body["frame_id"]),
                 confidence=_number(body, "confidence", REQUIRED),
                 data_age_ms=_number(body, "data_age_ms", REQUIRED),
-                safety_state=str(body["safety_state"]),
+                safety_state=safety_state,
                 calibration_version=(str(body["calibration_version"]) if body.get("calibration_version") is not None else None),
                 calibration_age_days=_number(body, "calibration_age_days", None),
             )
@@ -435,6 +489,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         outcome, reason = decision.outcome, decision.reason
+        if safety_note and outcome is RequestOutcome.INHIBITED:
+            reason = safety_note
         if outcome is RequestOutcome.ACCEPTED and not self.server.claim_frame(request.frame_id):
             # the same visual frame must never be turned into a second command
             outcome = RequestOutcome.REJECTED
@@ -456,8 +512,18 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class VisualServoingServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int], role: str, limits: ServoLimits | None = None, token: str = "") -> None:
+    def __init__(
+        self,
+        address: tuple[str, int],
+        role: str,
+        limits: ServoLimits | None = None,
+        token: str = "",
+        accept_legacy_safety_string: bool | None = None,
+    ) -> None:
         super().__init__(address, Handler)
+        self.accept_legacy_safety_string = (
+            DEFAULT_ACCEPT_LEGACY_SAFETY_STRING if accept_legacy_safety_string is None else accept_legacy_safety_string
+        )
         # empty means no token (loopback only; see access.py)
         self.token = token
         self.role = role

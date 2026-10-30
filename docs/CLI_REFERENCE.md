@@ -246,6 +246,8 @@ process: `--min-confidence` (0.6), `--max-data-age-ms` (200), `--max-calibration
 `--max-angular-speed` (0.5 rad/s) and `--valid-for-ms` (250). A request may ask
 for something stricter in its own body; asking for something looser answers `400`.
 
+In the body of `POST /request` and of a session's `request` step, `safety_state` is the SafetyState object (`state` and `timestamp_utc`, as `GET`/`POST /check` of the safety zones service returns it in `sdkSafetyState`). The service answers `INHIBITED` when the object has no time, a time in an unknown format or in the future, or is older than `--max-safety-age-ms` (1000); a bare string such as `"READY"` is also `INHIBITED` unless the service was started with `--accept-legacy-safety-string` (off by default). Nothing here asks the safety zones service itself: the time only keeps an old answer from being reused.
+
 **`GET /stats`** — `{"role": "<the project's own role string>"}`, `200`.
 
 **`POST /correct`** — same fields as the CLI's `correct` flags, as JSON

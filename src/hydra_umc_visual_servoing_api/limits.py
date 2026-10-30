@@ -22,6 +22,8 @@ DEFAULT_MAX_GAIN = 2.0
 DEFAULT_MAX_LINEAR_SPEED = 0.25  # m/s
 DEFAULT_MAX_ANGULAR_SPEED = 0.5  # rad/s
 DEFAULT_VALID_FOR_MS = 250.0
+# Oldest SafetyState (by its own timestamp) a correction may rely on.
+DEFAULT_MAX_SAFETY_AGE_MS = 1000.0
 
 
 def _finite_positive(value: float, name: str) -> None:
@@ -40,6 +42,7 @@ class ServoLimits:
     # How long a consumer may keep applying a command before it must stop
     # unless a newer one arrived.
     valid_for_ms: float = DEFAULT_VALID_FOR_MS
+    max_safety_age_ms: float = DEFAULT_MAX_SAFETY_AGE_MS
 
     def __post_init__(self) -> None:
         if isinstance(self.min_confidence, bool) or not isinstance(self.min_confidence, (int, float)) or not (
@@ -53,3 +56,4 @@ class ServoLimits:
         _finite_positive(self.max_linear_speed, "max_linear_speed")
         _finite_positive(self.max_angular_speed, "max_angular_speed")
         _finite_positive(self.valid_for_ms, "valid_for_ms")
+        _finite_positive(self.max_safety_age_ms, "max_safety_age_ms")

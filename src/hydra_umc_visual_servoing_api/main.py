@@ -33,6 +33,7 @@ from .limits import (
     DEFAULT_MAX_GAIN,
     DEFAULT_MAX_LINEAR_SPEED,
     DEFAULT_MIN_CONFIDENCE,
+    DEFAULT_MAX_SAFETY_AGE_MS,
     DEFAULT_VALID_FOR_MS,
     ServoLimits,
 )
@@ -144,6 +145,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
             max_linear_speed=args.max_linear_speed,
             max_angular_speed=args.max_angular_speed,
             valid_for_ms=args.valid_for_ms,
+            max_safety_age_ms=args.max_safety_age_ms,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -157,7 +159,9 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     if problem:
         print(f"error: {problem}", file=sys.stderr)
         return 2
-    server = VisualServoingServer((args.addr, args.port), ROLE, limits, token)
+    server = VisualServoingServer(
+        (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string
+    )
     print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port} ({'Bearer token required' if token else 'no token, loopback only'})")
     print(
         f"[visual-servoing-api] limits fixed at start-up (a request can only tighten them): "
@@ -248,6 +252,10 @@ def _build_parser() -> argparse.ArgumentParser:
                        help=f"Highest angular speed any command may have, rad/s (default: {DEFAULT_MAX_ANGULAR_SPEED})")
     serve.add_argument("--valid-for-ms", type=float, default=DEFAULT_VALID_FOR_MS, dest="valid_for_ms",
                        help=f"How long a consumer may keep applying a command, ms (default: {DEFAULT_VALID_FOR_MS})")
+    serve.add_argument("--max-safety-age-ms", type=float, default=DEFAULT_MAX_SAFETY_AGE_MS, dest="max_safety_age_ms",
+                       help=f"Oldest SafetyState (by its timestamp_utc) a correction may rely on, ms (default: {DEFAULT_MAX_SAFETY_AGE_MS})")
+    serve.add_argument("--accept-legacy-safety-string", action="store_true", dest="accept_legacy_safety_string",
+                       help="believe a bare safety_state string such as \"READY\" (no time) as before; off by default, when only the SafetyState object with a recent timestamp_utc can authorize a correction")
     serve.set_defaults(func=_cmd_serve)
 
     return parser
