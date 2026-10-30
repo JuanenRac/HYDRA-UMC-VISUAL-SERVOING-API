@@ -240,10 +240,10 @@ separate zukünftige Arbeit.
 
 ### FAHRPLAN
 
-* **Phase 1:** Multi-Kamera-Pipeline-Synchronisation und Kalibrierung für 8x USB 3.0-Feeds.
-* **Phase 2:** Migration zu YOLOv11 und Hailo-8L-Optimierung für die Erkennung industrieller Komponenten.
-* **Phase 3:** Echtzeit-3D-Rekonstruktion aus Stereo-Vision-Knoten und dynamische Kartierung von Sicherheitszonen.
-* **Phase 4:** Unterstützung für visuelles 9-DOF-Tracking (einschließlich Orientierungsredundanz) und submikrometrische Korrektur.
+* **Phase 1:** Hand-Auge-Kalibrierung, damit Kameraposen im Roboterkoordinatensystem ausgedrückt werden können.
+* **Phase 2:** Bildbasiertes Visual Servoing (IBVS) neben dem bestehenden positionsbasierten Regelgesetz.
+* **Phase 3:** Eine Ratenbegrenzung für die an den Roboter gesendeten Geschwindigkeitsbefehle.
+* **Phase 4:** Ein Watchdog, der die Bewegung stoppt, wenn Erkennungen veralten oder ausbleiben.
 
 ## 🌍 Sprachen
 

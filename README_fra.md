@@ -239,10 +239,10 @@ cœur HYDRA-UMC est un travail futur séparé.
 
 ### FEUILLE DE ROUTE
 
-* **Phase 1 :** Synchronisation et étalonnage du pipeline multi-caméras pour 8 flux USB 3.0.
-* **Phase 2 :** Migration vers YOLOv11 et optimisation pour Hailo-8L pour la détection de composants industriels.
-* **Phase 3 :** Reconstruction 3D en temps réel à partir de nœuds de vision stéréo et cartographie dynamique des zones de sécurité.
-* **Phase 4 :** Prise en charge du suivi visuel 9-DOF (y compris la redondance d'orientation) et correction sub-micrométrique.
+* **Phase 1 :** Calibration main-œil, pour exprimer les poses de la caméra dans le repère du robot.
+* **Phase 2 :** Asservissement visuel basé sur l'image (IBVS) en complément de la loi actuelle basée sur la position.
+* **Phase 3 :** Une limite de cadence pour les commandes de vitesse envoyées au robot.
+* **Phase 4 :** Un watchdog qui arrête le mouvement lorsque les détections deviennent périmées ou disparaissent.
 
 ## 🌍 Langues
 

@@ -236,10 +236,10 @@ velocity command to the HYDRA-UMC core is separate future work.
 
 ### ROADMAP
 
-* **Phase 1:** Multi-camera pipeline synchronization and calibration for 8x USB 3.0 feeds.
-* **Phase 2:** Migration to YOLOv11 and Hailo-8L optimization for industrial component detection.
-* **Phase 3:** Real-time 3D reconstruction from stereo vision nodes and safety zone dynamic mapping.
-* **Phase 4:** Support for 9-DOF visual tracking (including orientation redundancy) and sub-micrometric correction.
+* **Phase 1:** Hand-eye calibration, so camera poses can be expressed in the robot frame.
+* **Phase 2:** Image-based visual servoing (IBVS) alongside the existing position-based law.
+* **Phase 3:** A rate limit on the velocity commands sent to the robot.
+* **Phase 4:** A watchdog that stops the motion when detections go stale or disappear.
 
 ## 🌍 Languages
 

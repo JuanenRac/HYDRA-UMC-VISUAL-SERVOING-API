@@ -235,10 +235,10 @@ comando de velocidade resultante para o núcleo HYDRA-UMC é trabalho futuro à 
 
 ### ROTEIRO
 
-* **Fase 1:** sincronização e calibração do pipeline multicâmara para 8 fluxos USB 3.0.
-* **Fase 2:** migração para o YOLOv11 e otimização para o Hailo-8L na deteção de componentes industriais.
-* **Fase 3:** reconstrução 3D em tempo real a partir de nós de visão estéreo e mapeamento dinâmico de zonas de segurança.
-* **Fase 4:** suporte de seguimento visual 9-DOF (incluindo redundância de orientação) e correção sub-micrométrica.
+* **Fase 1:** Calibração mão-olho, para exprimir as poses da câmara no referencial do robô.
+* **Fase 2:** Servo visual baseado em imagem (IBVS) a par da lei atual baseada em posição.
+* **Fase 3:** Um limite de ritmo para os comandos de velocidade enviados ao robô.
+* **Fase 4:** Um watchdog que para o movimento quando as deteções ficam obsoletas ou desaparecem.
 
 ## 🌍 Idiomas
 

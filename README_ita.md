@@ -240,10 +240,10 @@ HYDRA-UMC è un lavoro futuro separato.
 
 ### TABELLA DI MARCIA
 
-* **Fase 1:** Sincronizzazione e calibrazione della pipeline multi-camera per 8 ingressi USB 3.0.
-* **Fase 2:** Migrazione a YOLOv11 e ottimizzazione per Hailo-8L per il rilevamento di componenti industriali.
-* **Fase 3:** Ricostruzione 3D in tempo reale dai nodi di visione stereo e mappatura dinamica delle zone di sicurezza.
-* **Fase 4:** Supporto per il tracciamento visivo 9-DOF (inclusa la ridondanza dell'orientamento) e correzione sub-micrometrica.
+* **Fase 1:** Calibrazione mano-occhio, per esprimere le pose della telecamera nel sistema di riferimento del robot.
+* **Fase 2:** Servo visivo basato sull'immagine (IBVS) accanto alla legge attuale basata sulla posizione.
+* **Fase 3:** Un limite di frequenza per i comandi di velocità inviati al robot.
+* **Fase 4:** Un watchdog che ferma il movimento quando le rilevazioni diventano obsolete o scompaiono.
 
 ## 🌍 Lingue
 

@@ -237,10 +237,10 @@ es trabajo futuro aparte.
 
 ### HOJA DE RUTA
 
-* **Fase 1:** Sincronización y calibración del pipeline multi-cámara para 8x entradas USB 3.0.
-* **Fase 2:** Migración a YOLOv11 y optimización para Hailo-8L para detección de componentes industriales.
-* **Fase 3:** Reconstrucción 3D en tiempo real desde nodos de visión estéreo y mapeo dinámico de zonas de seguridad.
-* **Fase 4:** Soporte para seguimiento visual de 9-DOF (incluyendo redundancia de orientación) y corrección sub-micrométrica.
+* **Fase 1:** Calibración mano-ojo, para expresar las poses de la cámara en el sistema de coordenadas del robot.
+* **Fase 2:** Servo visual basado en imagen (IBVS) junto a la ley actual basada en posición.
+* **Fase 3:** Un límite de ritmo para las órdenes de velocidad enviadas al robot.
+* **Fase 4:** Un watchdog que detiene el movimiento cuando las detecciones caducan o desaparecen.
 
 ## 🌍 Idiomas
 
