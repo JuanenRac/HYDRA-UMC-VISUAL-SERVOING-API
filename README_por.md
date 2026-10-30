@@ -109,6 +109,8 @@ flowchart LR
 * **Porque o `authorize_correction()` verifica o `safety_state` antes da confiança/atualidade.** Uma falha de segurança tem de vencer tudo o resto, mesmo uma deteção perfeitamente recente e confiável - por isso `INHIBITED` (safety_state != "READY") é verificado primeiro e interrompe o resto da política. Só depois de confirmar que o braço é seguro de mover é que importa saber se os *dados* são suficientemente fiáveis para o mover (`REJECTED` por baixa confiança ou dados antigos). Isto espelha a precedência de `INHIBITED` antes de `DANGER`/`WARNING` já usada no HYDRA-UMC-SAFETY-ZONES.
 * **Porque o `request` é um subcomando novo em vez de alterar o `correct`.** O `correct` é o utilitário matemático de baixo nível já existente (sem noção de segurança nem de atualidade da câmara), com os seus próprios chamadores e testes; envolvê-lo numa porta de segurança no próprio sítio mudaria em silêncio o seu contrato. O `request` acrescenta o ponto de entrada protegido e voltado para a câmara que o código do ecossistema deve realmente chamar, enquanto o `correct` continua disponível sem alterações para o uso direto da matemática de pose.
 
+**Veredicto de segurança por predefinição na unidade instalada.** A unidade systemd define `HYDRA_UMC_SAFETY_ZONES_URL=http://127.0.0.1:8108` e arranca o serviço com `--safety-zones-url`, pelo que uma instância instalada toma o veredicto de HYDRA-UMC-SAFETY-ZONES e ignora o `safety_state` de quem chama; sem resposta, com um erro ou com um veredicto antigo é `INHIBITED`. `/etc/hydra-umc/visual-servoing-api.env` pode mudar o endereço ou acrescentar `HYDRA_UMC_SAFETY_ZONES_TOKEN`. Executado à mão, a opção continua desligada se não for indicada.
+
 ## 🚀 Início rápido
 
 Requer Python 3.10 ou superior.

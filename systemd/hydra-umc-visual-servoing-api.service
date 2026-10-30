@@ -7,6 +7,10 @@
 # real PBVS correction/authorization law returns a velocity command for a
 # caller to actuate, it never actuates anything itself, but it still has
 # no authentication of its own, so it stays unreachable from the wider LAN.
+#
+# The safety verdict is asked of HYDRA-UMC-SAFETY-ZONES (loopback, port 8108) by default: the service then ignores the safety_state a caller
+# sends, and no answer, an error or an old verdict is INHIBITED. To point it elsewhere set HYDRA_UMC_SAFETY_ZONES_URL (and, when that service
+# asks for a token, HYDRA_UMC_SAFETY_ZONES_TOKEN) in /etc/hydra-umc/visual-servoing-api.env, which is read after the default below.
 [Unit]
 Description=HYDRA-UMC-VISUAL-SERVOING-API real PBVS correction/authorization API
 After=network-online.target
@@ -18,7 +22,9 @@ User=hydra-umc-visual-servoing-api
 Group=hydra-umc-visual-servoing-api
 WorkingDirectory=/opt/hydra-umc/visual-servoing-api
 Environment=PYTHONPATH=/opt/hydra-umc/visual-servoing-api/src
-ExecStart=/usr/bin/python3 -m hydra_umc_visual_servoing_api.main serve --addr 127.0.0.1 --port 8116
+Environment=HYDRA_UMC_SAFETY_ZONES_URL=http://127.0.0.1:8108
+EnvironmentFile=-/etc/hydra-umc/visual-servoing-api.env
+ExecStart=/usr/bin/python3 -m hydra_umc_visual_servoing_api.main serve --addr 127.0.0.1 --port 8116 --safety-zones-url ${HYDRA_UMC_SAFETY_ZONES_URL}
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
