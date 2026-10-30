@@ -109,7 +109,7 @@ flowchart LR
 * **为什么 `authorize_correction()` 在检查置信度/新鲜度之前先检查 `safety_state`。** 安全故障必须凌驾于一切之上，即便面对一个完全新鲜、可信的检测结果也是如此——因此 `INHIBITED`（safety_state != "READY"）被最先检查，并短路掉策略的其余部分。只有在确认机械臂可以安全移动之后，*数据*是否足够可信才会影响是否据此移动它（置信度过低或数据过期则返回 `REJECTED`）。这与 HYDRA-UMC-SAFETY-ZONES 中已经使用的 `INHIBITED` 优先于 `DANGER`/`WARNING` 的顺序一致。
 * **为什么 `request` 是新增子命令而不是修改 `correct`。** `correct` 是已有的底层纯数学工具（不感知安全状态，也没有摄像头新鲜度的概念），有自己的调用方和测试；就地为其套上安全联锁会悄悄改变它的契约。`request` 增加了这个带联锁、面向摄像头的入口点，生态系统代码实际上应当调用它，而 `correct` 保持不变，仍可用于直接的位姿数学运算。
 
-**部署的单元默认启用安全判定。** systemd 单元设置 `HYDRA_UMC_SAFETY_ZONES_URL=http://127.0.0.1:8108`，并以 `--safety-zones-url` 启动服务，因此部署的实例会从 HYDRA-UMC-SAFETY-ZONES 获取判定，并忽略调用方的 `safety_state`；无应答、出错或判定过旧时为 `INHIBITED`。`/etc/hydra-umc/visual-servoing-api.env` 可以修改地址或添加 `HYDRA_UMC_SAFETY_ZONES_TOKEN`。手动运行时，除非指定，该选项保持关闭。
+**部署的单元默认启用安全判定（尚未部署）。** systemd 单元设置 `HYDRA_UMC_SAFETY_ZONES_URL=http://127.0.0.1:8108`，并以 `--safety-zones-url` 启动服务，因此部署的实例会从 HYDRA-UMC-SAFETY-ZONES 获取判定，并忽略调用方的 `safety_state`；无应答、出错或判定过旧时为 `INHIBITED`。`/etc/hydra-umc/visual-servoing-api.env` 可以修改地址或添加 `HYDRA_UMC_SAFETY_ZONES_TOKEN`。手动运行时，除非指定，该选项保持关闭。
 
 ## 🚀 快速开始
 
