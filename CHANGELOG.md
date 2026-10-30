@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.1] - A correction needs a recent safety state and the pose model is built from the verified bytes
+
 - **A correction needs a recent SafetyState object:** `POST /request` and a session's `request` step now read `safety_state` as the SafetyState object (`state` and `timestamp_utc`) and answer `INHIBITED` when it has no time, is malformed, lies in the future or is older than `--max-safety-age-ms` (default 1000). A bare string such as `READY`, which says nothing about when it was true, is refused too unless the service is started with `--accept-legacy-safety-string` (off by default). The checks fail closed: anything unusable is `INHIBITED`, never `READY`.
 
 - **The pose model can be built from the bytes the registry verified:** `load_hailo_pose_model(..., hef_bytes=..., expected_sha256=...)` builds the HEF from the bytes that `HYDRA-UMC-DETECTION-HEF` read and checked (`safe_load(..., keep_bytes=True)`) and never reopens the path, so a file replaced after the check cannot be what runs; the bytes are hashed again when a checksum is given, and empty or different bytes raise `ModelIntegrityError`. Without `hef_bytes` the path is opened as before. The servoing sessions of the HTTP routes already hold the filter, dead band, acceleration limit and vision timeout, so the second controller class that had been added is removed.
