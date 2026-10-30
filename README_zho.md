@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | 版本 | `0.2.0` |
 | 成熟度 | 可用 |
-| 测试 | 172 (`python -m pytest -q tests`) |
+| 测试 | 194 (`python -m pytest -q tests`) |
 | 技术栈 | Python / 6-DOF pose estimation |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 172 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 194 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 文档 | 🟢 | 八种语言的 README，每次变更都会与清单核对 |
 
@@ -71,6 +71,7 @@ GPL-3.0-or-later - see LICENSE
 * 📐 **位姿估计：** 从单摄像头或多摄像头视角进行 6 自由度物体位姿估计。*（未来工作——需要本环境尚不具备的真实 Hailo-8 NPU。）*
 * ⚡ **硬件加速：** 使用 Hailo-8 输出进行即时坐标计算。*（未来工作，原因相同。）*
 * 🔌 **HailoRT 集成边界，先于模块本身准备就绪：** `hailo_runtime.py` 依据真实、已确认的 `hailo_platform` API(`VDevice`、`HEF`、`ConfigureParams`)编写——采用延迟导入,因此即使没有安装 `hailort` 包或没有 Hailo-8 模块存在,本仓库也能干净地安装/测试——并且 `hailo_output_to_pose()` 会将真实的推理结果直接适配为 `compute_pose_error()` 已经在使用的 `Pose6D`。*(已实现,仅为集成边界——真正运行推理仍然需要一个真实编译好的姿态估计 `.hef` 和一个物理的 Hailo-8 模块。)*
+* 🔐 **用已验证的字节构建姿态模型:** Hailo 姿态模型可以用 `HYDRA-UMC-DETECTION-HEF` 已经读取并检查过的字节来构建，这里会再次计算哈希，且不会重新打开路径；空的或不同的字节会被拒绝。*(尚未在 Hailo 芯片上运行过任何模型。)*
 
 ## 🧩 在 HYDRA-UMC 中的角色
 
@@ -119,7 +120,7 @@ flowchart LR
 
 ## 🧪 测试
 
-运行 `python -m pytest -q tests` 会执行 172 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
+运行 `python -m pytest -q tests` 会执行 194 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
 
 CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
 
@@ -221,7 +222,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 除非上游安全状态为 `READY` 且数据足够可信/新鲜，否则拒绝将视觉检测
 结果转化为运动，通过 `request` CLI 命令暴露;以及一个真实的 HailoRT 集成边界
 (`hailo_runtime.py`),已准备好在真实的 Hailo-8 姿态估计器接入的那一刻使用。
-共计 172 个测试。
+共计 194 个测试。
 
 **仍待完成，受限于真实硬件：** 要真正通过 `hailo_runtime.py` 运行 6 自由度
 位姿*估计*,需要一个真实编译好的姿态估计 `.hef`(目前尚未选定具体模型)

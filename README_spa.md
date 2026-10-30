@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versión | `0.2.0` |
 | Madurez | Funcional |
-| Tests | 172 (`python -m pytest -q tests`) |
+| Tests | 194 (`python -m pytest -q tests`) |
 | Tecnología | Python / 6-DOF pose estimation |
 | Destino | La Raspberry Pi CM5 de una celda HYDRA-UMC |
 | En hardware real | Todavía no: no consta ninguna ejecución en hardware real para esta versión |
@@ -51,7 +51,7 @@ Cada línea es una parte de este repositorio y la luz dice hasta dónde llega ho
 | Área | Estado | Qué significa aquí |
 |---|---|---|
 | Software | 🟡 | Funciona para su propósito principal; la comprobación de honestidad de arriba lista lo que aún falta |
-| Pruebas | 🟢 | 172 pruebas automáticas, ejecutadas en cada cambio |
+| Pruebas | 🟢 | 194 pruebas automáticas, ejecutadas en cada cambio |
 | Hardware real | 🔴 | Todavía no: no consta ninguna ejecución en hardware real para esta versión |
 | Documentación | 🟢 | README en ocho idiomas, comprobado contra el manifiesto en cada cambio |
 
@@ -71,6 +71,7 @@ Está diseñado para admitir tanto configuraciones **Eye-in-Hand** (cámara en l
 * 📐 **Estimación de Pose:** Estimación de pose de objeto de 6-DOF desde vistas de cámara única o múltiple. *(trabajo futuro - necesita la NPU Hailo-8 real que este entorno todavía no tiene.)*
 * ⚡ **Acelerado por Hardware:** Utiliza la salida de Hailo-8 para el cálculo instantáneo de coordenadas. *(trabajo futuro, mismo motivo.)*
 * 🔌 **Límite de integración con HailoRT, preparado antes que el módulo:** `hailo_runtime.py` está escrito contra la API real y confirmada de `hailo_platform` (`VDevice`, `HEF`, `ConfigureParams`) - importada de forma perezosa para que este repositorio se instale/testee limpiamente sin el paquete `hailort` ni un módulo Hailo-8 presente - y `hailo_output_to_pose()` adapta un resultado de inferencia real directamente al `Pose6D` que `compute_pose_error()` ya consume. *(implementado, solo límite de integración - ejecutar inferencia de verdad todavía necesita un `.hef` de estimación de pose realmente compilado y un módulo Hailo-8 físico.)*
+* 🔐 **Modelo de pose desde bytes verificados:** el modelo de pose de Hailo puede construirse a partir de los bytes que `HYDRA-UMC-DETECTION-HEF` ya leyó y comprobó, con su hash calculado de nuevo aquí, y la ruta nunca se reabre; los bytes vacíos o distintos se rechazan. *(Todavía no se ha ejecutado ningún modelo en un chip Hailo.)*
 
 ## 🧩 Papel en HYDRA-UMC
 
@@ -119,7 +120,7 @@ Requiere Python 3.10 o superior.
 
 ## 🧪 Pruebas
 
-172 pruebas automáticas se ejecutan con `python -m pytest -q tests`. No necesitan hardware ni nada fuera de esta máquina.
+194 pruebas automáticas se ejecutan con `python -m pytest -q tests`. No necesitan hardware ni nada fuera de esta máquina.
 
 El CI ejecuta `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que comprueba el manifiesto, los documentos, los ocho README y las imágenes.
 
@@ -224,7 +225,7 @@ real; la política de autorización con verja de seguridad
 movimiento a menos que el estado de seguridad aguas arriba sea `READY`
 y los datos sean lo bastante confiables/frescos, expuesta vía el comando
 CLI `request`; y un límite de integración con HailoRT real (`hailo_runtime.py`)
-listo para un estimador de pose Hailo-8 real en el momento en que se conecte. 172 tests en total.
+listo para un estimador de pose Hailo-8 real en el momento en que se conecte. 194 tests en total.
 
 **Todavía por delante, bloqueado por hardware real:** ejecutar de verdad
 la *estimación* de pose de 6-DOF a través de `hailo_runtime.py` necesita

@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versione | `0.2.0` |
 | Maturità | Funzionale |
-| Test | 172 (`python -m pytest -q tests`) |
+| Test | 194 (`python -m pytest -q tests`) |
 | Tecnologia | Python / 6-DOF pose estimation |
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
@@ -51,7 +51,7 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Area | Stato | Cosa significa qui |
 |---|---|---|
 | Software | 🟡 | Funziona per il suo scopo principale; la verifica di onestà qui sopra elenca ciò che manca ancora |
-| Test | 🟢 | 172 test automatici, eseguiti a ogni modifica |
+| Test | 🟢 | 194 test automatici, eseguiti a ogni modifica |
 | Hardware reale | 🔴 | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
 | Documentazione | 🟢 | README in otto lingue, verificato rispetto al manifesto a ogni modifica |
 
@@ -71,6 +71,7 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 * 📐 **Stima della posa:** Stima della posa dell'oggetto 6-DOF da viste a telecamera singola o multipla. *(lavoro futuro - richiede la vera NPU Hailo-8 che questo ambiente non ha ancora.)*
 * ⚡ **Accelerazione hardware:** Utilizza l'output di Hailo-8 per il calcolo istantaneo delle coordinate. *(lavoro futuro, stesso motivo.)*
 * 🔌 **Limite di integrazione HailoRT, preparato in anticipo sul modulo:** `hailo_runtime.py` è scritto contro l'API reale e confermata `hailo_platform` (`VDevice`, `HEF`, `ConfigureParams`) - importata in modo lazy così che questo repository si installi/testi in modo pulito senza il pacchetto `hailort` né un modulo Hailo-8 presente - e `hailo_output_to_pose()` adatta un risultato di inferenza reale direttamente nel `Pose6D` che `compute_pose_error()` già consuma. *(implementato, solo limite di integrazione - eseguire davvero l'inferenza richiede ancora un `.hef` di stima della posa realmente compilato e un modulo Hailo-8 fisico.)*
+* 🔐 **Modello di posa da byte verificati:** il modello di posa Hailo può essere costruito dai byte che `HYDRA-UMC-DETECTION-HEF` ha già letto e controllato, sottoposti di nuovo a hash qui, e il percorso non viene mai riaperto; byte vuoti o diversi vengono rifiutati. *(Nessun modello è ancora stato eseguito su un chip Hailo.)*
 
 ## 🧩 Ruolo in HYDRA-UMC
 
@@ -119,7 +120,7 @@ Richiede Python 3.10 o successivo.
 
 ## 🧪 Test
 
-172 test automatici si eseguono con `python -m pytest -q tests`. Non richiedono hardware né nulla al di fuori di questa macchina.
+194 test automatici si eseguono con `python -m pytest -q tests`. Non richiedono hardware né nulla al di fuori di questa macchina.
 
 La CI esegue `HYDRA_UMC_CI=1 python tools/ci_validate.py`, che controlla il manifesto, i documenti, gli otto README e le immagini.
 
@@ -227,7 +228,7 @@ visiva in movimento a meno che lo stato di sicurezza a monte non sia
 `READY` e i dati non siano abbastanza affidabili/freschi, esposta
 tramite il comando CLI `request`; e un vero limite di integrazione
 HailoRT (`hailo_runtime.py`) pronto per un vero stimatore di posa Hailo-8
-non appena viene collegato. 172 test in totale.
+non appena viene collegato. 194 test in totale.
 
 **Ancora da fare, bloccato da hardware reale:** eseguire davvero la
 *stima* di posa a 6 gradi di libertà tramite `hailo_runtime.py` richiede

@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-194%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versão | `0.2.0` |
 | Maturidade | Funcional |
-| Testes | 172 (`python -m pytest -q tests`) |
+| Testes | 194 (`python -m pytest -q tests`) |
 | Tecnologia | Python / 6-DOF pose estimation |
 | Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
 | Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
@@ -51,7 +51,7 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Área | Estado | O que significa aqui |
 |---|---|---|
 | Software | 🟡 | Funciona para o seu propósito principal; a verificação de honestidade acima lista o que ainda falta |
-| Testes | 🟢 | 172 testes automáticos, executados a cada alteração |
+| Testes | 🟢 | 194 testes automáticos, executados a cada alteração |
 | Hardware real | 🔴 | Ainda não: não há registo de execução em hardware real para esta versão |
 | Documentação | 🟢 | README em oito idiomas, verificado contra o manifesto a cada alteração |
 
@@ -71,6 +71,7 @@ Foi concebido para suportar configurações **Eye-in-Hand** (câmara na ferramen
 * 📐 **Estimação de pose:** estimação de pose 6-DOF de objetos a partir de vistas de uma ou várias câmaras. *(trabalho futuro - precisa da NPU Hailo-8 real a que este repositório ainda não tem acesso.)*
 * ⚡ **Acelerado por hardware:** usa a saída do Hailo-8 para um cálculo instantâneo de coordenadas. *(trabalho futuro, pelo mesmo motivo.)*
 * 🔌 **Fronteira de integração com o HailoRT, preparada antes do módulo:** o `hailo_runtime.py` está escrito contra a API real e confirmada do `hailo_platform` (`VDevice`, `HEF`, `ConfigureParams`) - importada sob demanda para que este repositório instale/teste de forma limpa sem o pacote `hailort` nem um módulo Hailo-8 - e o `hailo_output_to_pose()` adapta um resultado de inferência real diretamente para o `Pose6D` que o `compute_pose_error()` já consome. *(implementado, apenas a fronteira de integração - executar inferência a sério ainda precisa de um `.hef` compilado de estimação de pose e de um módulo Hailo-8 físico.)*
+* 🔐 **Modelo de pose a partir de bytes verificados:** o modelo de pose Hailo pode ser construído a partir dos bytes que o `HYDRA-UMC-DETECTION-HEF` já leu e verificou, com o hash calculado de novo aqui, e o caminho nunca é reaberto; bytes vazios ou diferentes são recusados. *(Ainda não correu nenhum modelo num chip Hailo.)*
 
 ## 🧩 Papel no HYDRA-UMC
 
@@ -119,7 +120,7 @@ Requer Python 3.10 ou superior.
 
 ## 🧪 Testes
 
-172 testes automáticos correm com `python -m pytest -q tests`. Não precisam de hardware nem de nada fora desta máquina.
+194 testes automáticos correm com `python -m pytest -q tests`. Não precisam de hardware nem de nada fora desta máquina.
 
 A CI executa `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que verifica o manifesto, os documentos, os oito README e as imagens.
 
@@ -223,7 +224,7 @@ política de autorização protegida pela segurança (`authorization.py`) que re
 transformar uma deteção visual em movimento a menos que o estado de segurança
 a montante seja `READY` e os dados sejam confiáveis/recentes, exposta através do
 comando `request` da CLI; e uma fronteira real de integração com o HailoRT (`hailo_runtime.py`)
-pronta para um estimador de pose Hailo-8 real no momento em que se ligue. 172 testes
+pronta para um estimador de pose Hailo-8 real no momento em que se ligue. 194 testes
 no total.
 
 **Ainda por fazer, e dependente de hardware real:** executar de facto a *estimação* de pose 6-DOF
