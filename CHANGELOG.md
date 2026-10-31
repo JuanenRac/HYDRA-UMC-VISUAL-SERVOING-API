@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.2] - Image-based servoing and a record of the corrections, both off by default, the orientation error as a real rotation and the safety state asked of the safety zones service
+
 - **A record of the corrections for tuning offline (off by default):** with `servo_log.file` set in `configs/visual-servoing.json`, every correction that `POST /request` decides appends one JSON line (instant, frame id, outcome and reason, the norms of the pose error, the command and whether it was held, and how long the decision took). No image, pose values or token are written, and a file that cannot be written never stops a correction. Nothing is written while the file name is empty.
 
 - **Image-based servoing (off by default):** with `ibvs.enabled` true in `configs/visual-servoing.json` (`ibvs.damping`, 0.0001 by default), `POST /ibvs/correct` closes the loop on features in the image instead of on a pose. It takes 3 to 32 `features` and their `desired` positions in normalized image coordinates and the `depth` in metres (one value or one per point), builds the interaction matrix, solves the damped least squares for the camera velocity and bounds it like `/correct` (the server's own limits, direction kept); the answer is a camera-frame command that is zero and held once the rms feature error is within `feature_tol` (0.002). Tested against the projection geometry and with a simulated camera that converges from an offset and from a turn; the route answers 404 while the switch is off.
