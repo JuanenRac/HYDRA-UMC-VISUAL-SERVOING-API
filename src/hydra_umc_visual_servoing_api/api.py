@@ -38,6 +38,7 @@ from .authorization import SDK_SAFETY_STATES, READY_SAFETY_STATE
 from .ibvs import IbvsPolicy, compute_ibvs_command
 from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
+from .servo_log import ServoLog, ServoLogPolicy, make_record
 from .servo import VelocityCommand, compute_pose_error, compute_velocity_command, is_converged
 from .session import (
     DEFAULT_FILTER_ALPHA,
@@ -507,6 +508,7 @@ class Handler(BaseHTTPRequestHandler):
         _write_json(self, 200, {"feature_rms": rms, "command": payload, "converged": converged, "frame": "camera"})
 
     def _handle_request(self, body: dict) -> None:
+        started = time.monotonic()
         poses = self._parse_poses(body)
         if poses is None:
             return
@@ -560,6 +562,14 @@ class Handler(BaseHTTPRequestHandler):
             # not authorised, or nothing left to correct: an explicit zero
             # command, never "no command", so the consumer stops
             command = self._command_payload(ZERO_COMMAND, request.frame_id, hold=True)
+        if self.server.servo_log.enabled:
+            self.server.servo_log.write(make_record(
+                issued_at_ms=command["issued_at_ms"], frame_id=request.frame_id, outcome=outcome.value, reason=reason,
+                linear_error=decision.error.linear_norm if decision.error is not None else None,
+                angular_error=decision.error.angular_norm if decision.error is not None else None,
+                command=command, converged=bool(converged) if accepted else False,
+                decision_ms=(time.monotonic() - started) * 1000.0,
+            ))
         _write_json(self, 200, {
             "outcome": outcome.value,
             "reason": reason,
@@ -579,8 +589,11 @@ class VisualServoingServer(ThreadingHTTPServer):
         accept_legacy_safety_string: bool | None = None,
         safety_zones: SafetyZonesClient | None = None,
         ibvs: IbvsPolicy | None = None,
+        servo_log: ServoLogPolicy | None = None,
     ) -> None:
         super().__init__(address, Handler)
+        # one JSON line per decided correction for tuning offline (servo_log.py); writes nothing by default
+        self.servo_log = ServoLog(servo_log or ServoLogPolicy())
         # the image-based law (ibvs.py); POST /ibvs/correct answers 404 unless it is enabled
         self.ibvs = ibvs or IbvsPolicy()
         # when set, the safety state is asked of SAFETY-ZONES and what the caller says is ignored

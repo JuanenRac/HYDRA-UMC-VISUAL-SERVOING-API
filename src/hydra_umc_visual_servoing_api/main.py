@@ -40,6 +40,7 @@ from .limits import (
     ServoLimits,
 )
 from .ibvs import IbvsError, load_ibvs_policy
+from .servo_log import ServoLogError, load_servo_log_policy
 from .orientation import OrientationConfigError, load_orientation_policy, set_active_policy
 from .pose import Pose6D, PoseParseError
 from .safety_source import DEFAULT_TIMEOUT_MS, SafetyZonesClient
@@ -182,7 +183,8 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         return 2
     try:
         ibvs_policy = load_ibvs_policy(args.config)
-    except IbvsError as exc:
+        log_policy = load_servo_log_policy(args.config)
+    except (IbvsError, ServoLogError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     zones_url = args.safety_zones_url or os.environ.get("HYDRA_UMC_SAFETY_ZONES_URL", "")
@@ -198,7 +200,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
             return 2
     server = VisualServoingServer(
         (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string,
-        safety_zones=zones_client, ibvs=ibvs_policy,
+        safety_zones=zones_client, ibvs=ibvs_policy, servo_log=log_policy,
     )
     if zones_client is not None:
         print(f"[visual-servoing-api] the safety state is asked of SAFETY-ZONES at {zones_client.base_url}; what a caller says about it is ignored, and a request needs captured_at_utc")

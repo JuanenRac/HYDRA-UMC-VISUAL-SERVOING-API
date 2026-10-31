@@ -6,5 +6,8 @@
   "ibvs": {
     "enabled": false,
     "damping": 0.0001
+  },
+  "servo_log": {
+    "file": ""
   }
 }
