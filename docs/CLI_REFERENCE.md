@@ -49,6 +49,8 @@ Closed-loop kinematic correction from Hailo-8 visual feedback to real-time pose 
 Every `--current`/`--target` pose is `x,y,z,roll,pitch,yaw` (meters,
 radians).
 
+**Orientation error and the configuration file.** The angular part of the pose error is the rotation that takes the current orientation to the target one by the shortest way, computed with unit quaternions, and it is given as a rotation vector (axis times angle) about the axes of the robot base or of the tool; `droll`, `dpitch` and `dyaw` keep their places in the answer but are the three components of that vector (their names are obsolete, `rotation_vector` reads them as such). A pose may also be a quaternion, `x,y,z,qw,qx,qy,qz` (text or list), or an object with `position` and `orientation` (the shape of the ecosystem pose contract); a quaternion that is not of length 1 is refused and the measured pose is filtered on the quaternion. `configs/visual-servoing.json`, named with `--config FILE` on `correct`, `request` and `serve` or with `HYDRA_UMC_VISUAL_SERVOING_CONFIG`, chooses `orientation.error` (`quaternion`, or the earlier `euler` difference, obsolete) and `orientation.frame` (`base` or `tool`).
+
 ## Commands
 
 ### `correct --current POSE --target POSE [--gain G] [--max-linear-speed S] [--max-angular-speed S] [--linear-tol T] [--angular-tol T]`
