@@ -191,7 +191,7 @@ def test_malformed_json_body_rejected() -> None:
         req = urllib.request.Request(f"{base}/correct", data=b"{not json", method="POST")
         try:
             urllib.request.urlopen(req, timeout=5)
-            assert False, "expected HTTPError"
+            raise AssertionError("expected HTTPError")
         except urllib.error.HTTPError as e:
             assert e.code == 400
 

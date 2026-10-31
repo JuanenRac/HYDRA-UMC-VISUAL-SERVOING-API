@@ -28,7 +28,7 @@ def test_parse_non_finite_value(value):
 
 def test_pose_is_immutable():
     p = Pose6D.parse("0,0,0,0,0,0")
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         p.x = 1.0  # type: ignore[misc]
 
 

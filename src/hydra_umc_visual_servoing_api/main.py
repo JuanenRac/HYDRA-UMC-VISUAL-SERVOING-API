@@ -15,6 +15,8 @@ hardware and land later.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import argparse
 import os
 import sys
@@ -146,8 +148,8 @@ def _cmd_request(args: argparse.Namespace) -> int:
     if decision.outcome is not RequestOutcome.ACCEPTED:
         return 2 if decision.outcome is RequestOutcome.INHIBITED else 1
 
-    error = decision.error
-    command = decision.command
+    error: Any = decision.error
+    command: Any = decision.command
     print(f"pose error   : dx={error.dx:.6f} dy={error.dy:.6f} dz={error.dz:.6f}  "
           f"droll={error.droll:.6f} dpitch={error.dpitch:.6f} dyaw={error.dyaw:.6f}")
     print(f"velocity cmd : vx={command.vx:.6f} vy={command.vy:.6f} vz={command.vz:.6f}  "

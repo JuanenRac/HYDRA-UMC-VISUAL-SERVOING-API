@@ -81,7 +81,7 @@ def test_the_default_gain_converges_without_overshoot_even_with_a_delay(delay):
     assert linear[-1] < 0.005 and angular[-1] < 0.02, "it must reach the tolerance"
     # no overshoot: the distance to the target never grows once the approach has begun
     for series in (linear, angular):
-        for before, after in zip(series, series[1:]):
+        for before, after in zip(series, series[1:], strict=False):
             assert after <= before + 1e-9, "the distance to the target grew: the loop overshot"
 
 

@@ -54,7 +54,7 @@ def test_interaction_matrix_matches_the_projection_geometry() -> None:
         twist = [0.0] * 6
         twist[axis] = 1.0
         moved = _project(_move_camera(world, tuple(twist[:3]), tuple(twist[3:]), dt))
-        for i, ((x0, y0), (x1, y1)) in enumerate(zip(points, moved)):
+        for i, ((x0, y0), (x1, y1)) in enumerate(zip(points, moved, strict=False)):
             assert (x1 - x0) / dt == pytest.approx(rows[2 * i][axis], abs=1e-4)
             assert (y1 - y0) / dt == pytest.approx(rows[2 * i + 1][axis], abs=1e-4)
 

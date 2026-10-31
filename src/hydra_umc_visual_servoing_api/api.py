@@ -34,7 +34,7 @@ from .safety_source import SafetyZonesClient
 from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
 from datetime import datetime, timezone
 
-from .authorization import SDK_SAFETY_STATES, READY_SAFETY_STATE
+from .authorization import SDK_SAFETY_STATES, READY_SAFETY_STATE  # noqa: F401
 from .ibvs import IbvsPolicy, compute_ibvs_command
 from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
@@ -66,7 +66,7 @@ ZERO_COMMAND = VelocityCommand(vx=0.0, vy=0.0, vz=0.0, wroll=0.0, wpitch=0.0, wy
 REQUIRED = object()  # marks a field without a default: the request must carry it
 
 
-def _number(body: dict, key: str, default: object) -> float | None:
+def _number(body: dict, key: str, default: object) -> float:
     """`body[key]` as a float; a boolean or a non-number is an error, never converted."""
     if key not in body:
         if default is REQUIRED:
@@ -352,9 +352,9 @@ class Handler(BaseHTTPRequestHandler):
             effective = self._effective_limits(body)
             period = _number(body, "period_ms", DEFAULT_PERIOD_S * 1000.0) / 1000.0
             config = SessionConfig(
-                gain=effective["gain"],
-                max_linear_speed=effective["max_linear_speed"],
-                max_angular_speed=effective["max_angular_speed"],
+                gain=effective["gain"],  # type: ignore[arg-type]
+                max_linear_speed=effective["max_linear_speed"],  # type: ignore[arg-type]
+                max_angular_speed=effective["max_angular_speed"],  # type: ignore[arg-type]
                 period_s=period,
                 max_gain_period=_ceiling(body, "max_gain_period", DEFAULT_MAX_GAIN_PERIOD),
                 filter_alpha=_number(body, "filter_alpha", DEFAULT_FILTER_ALPHA),
@@ -413,8 +413,8 @@ class Handler(BaseHTTPRequestHandler):
                 decision = authorize_correction(
                     request,
                     AuthorizationPolicy(
-                        min_confidence=effective["min_confidence"],
-                        max_data_age_ms=effective["max_data_age_ms"],
+                        min_confidence=effective["min_confidence"],  # type: ignore[arg-type]
+                        max_data_age_ms=effective["max_data_age_ms"],  # type: ignore[arg-type]
                         max_calibration_age_days=effective["max_calibration_age_days"],
                     ),
                     gain=session.config.gain,
@@ -469,7 +469,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("frame_id must be a string")
             error = compute_pose_error(current, target)
             command = compute_velocity_command(
-                error, gain=effective["gain"],
+                error, gain=effective["gain"],  # type: ignore[arg-type]
                 max_linear_speed=effective["max_linear_speed"],
                 max_angular_speed=effective["max_angular_speed"],
             )
@@ -494,7 +494,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("frame_id must be a string")
             command, rms = compute_ibvs_command(
                 body["features"], body["desired"], body["depth"],
-                gain=effective["gain"], damping=self.server.ibvs.damping,
+                gain=effective["gain"], damping=self.server.ibvs.damping,  # type: ignore[arg-type]
                 max_linear_speed=effective["max_linear_speed"], max_angular_speed=effective["max_angular_speed"],
             )
             converged = rms <= _number(body, "feature_tol", 0.002)
@@ -527,13 +527,13 @@ class Handler(BaseHTTPRequestHandler):
                 calibration_age_days=_number(body, "calibration_age_days", None),
             )
             policy = AuthorizationPolicy(
-                min_confidence=effective["min_confidence"],
-                max_data_age_ms=effective["max_data_age_ms"],
+                min_confidence=effective["min_confidence"],  # type: ignore[arg-type]
+                max_data_age_ms=effective["max_data_age_ms"],  # type: ignore[arg-type]
                 max_calibration_age_days=effective["max_calibration_age_days"],
             )
             decision = authorize_correction(
                 request, policy,
-                gain=effective["gain"],
+                gain=effective["gain"],  # type: ignore[arg-type]
                 max_linear_speed=effective["max_linear_speed"],
                 max_angular_speed=effective["max_angular_speed"],
             )

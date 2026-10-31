@@ -81,7 +81,7 @@ class Pose6D:
             raise PoseParseError(f"non-numeric value in pose {text!r}: {exc}") from exc
         if not all(math.isfinite(value) for value in values):
             raise PoseParseError(f"pose values must be finite: {text!r}")
-        return cls(*values)
+        return cls(*values)  # type: ignore[arg-type]
 
     @classmethod
     def coerce(cls, value: object) -> "Pose6D":
@@ -100,7 +100,7 @@ class Pose6D:
                 raise PoseParseError(
                     f"a pose list needs 6 numbers (x,y,z,roll,pitch,yaw) or 7 (x,y,z,qw,qx,qy,qz), got {len(value)}"
                 )
-            return cls._from_numbers(dict(zip(POSE_FIELDS, value)))
+            return cls._from_numbers(dict(zip(POSE_FIELDS, value, strict=False)))
         if isinstance(value, dict) and "orientation" in value:
             return cls._from_contract(value)
         if isinstance(value, dict):
@@ -147,4 +147,4 @@ class Pose6D:
             if not math.isfinite(number):
                 raise PoseParseError(f"pose field {name} must be finite")
             values.append(float(number))
-        return cls(*values)
+        return cls(*values)  # type: ignore[arg-type]

@@ -6,7 +6,6 @@
 """The optional Bearer token: none needed on loopback, mandatory away from it, constant-time comparison, every route guarded."""
 from __future__ import annotations
 
-import json
 import threading
 import urllib.error
 import urllib.request

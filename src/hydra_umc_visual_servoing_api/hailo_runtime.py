@@ -140,7 +140,7 @@ def load_hailo_pose_model(
         _check_model_bytes(hef_path, hef_bytes, expected_sha256)
     hef = HEF(bytes(hef_bytes)) if hef_bytes is not None else HEF(str(hef_path))
     configure_params = ConfigureParams.create_from_hef(hef, interface=HailoStreamInterface.PCIe)
-    network_groups = vdevice.configure(hef, configure_params)
+    network_groups = vdevice.configure(hef, configure_params)  # type: ignore[attr-defined]
     network_group = network_groups[0]
 
     input_infos = hef.get_input_vstream_infos()
@@ -187,4 +187,4 @@ def hailo_output_to_pose(raw_output: dict[str, Any], model: HailoPoseModel) -> P
             f"hailo output {model.output_name!r}: expected 6 values (x, y, z, roll, "
             f"pitch, yaw), got {len(values)}"
         )
-    return Pose6D(*(float(value) for value in values))
+    return Pose6D(*(float(value) for value in values))  # type: ignore[arg-type]

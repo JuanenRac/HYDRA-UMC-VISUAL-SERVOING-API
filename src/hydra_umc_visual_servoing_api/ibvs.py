@@ -101,7 +101,7 @@ def _depths(value: object, count: int) -> list[float]:
 
 def interaction_matrix(points: list[tuple[float, float]], depths: list[float]) -> list[list[float]]:
     rows: list[list[float]] = []
-    for (x, y), z in zip(points, depths):
+    for (x, y), z in zip(points, depths, strict=False):
         rows.append([-1.0 / z, 0.0, x / z, x * y, -(1.0 + x * x), y])
         rows.append([0.0, -1.0 / z, y / z, 1.0 + y * y, -x * y, -x])
     return rows
@@ -127,7 +127,7 @@ def _solve(matrix: list[list[float]], rhs: list[float]) -> list[float]:
 
 
 def feature_error(points: list[tuple[float, float]], desired: list[tuple[float, float]]) -> list[float]:
-    return [v for (x, y), (xd, yd) in zip(points, desired) for v in (x - xd, y - yd)]
+    return [v for (x, y), (xd, yd) in zip(points, desired, strict=False) for v in (x - xd, y - yd)]
 
 
 def rms_error(error: list[float]) -> float:

@@ -41,7 +41,7 @@ def test_the_error_is_the_real_rotation_between_two_orientations() -> None:
     assert (delta * current.quaternion).angle_to(target.quaternion) < 1e-9
     # the difference of the Euler angles is not that rotation
     legacy = compute_pose_error(current, target, EULER).rotation_vector
-    assert max(abs(a - b) for a, b in zip(vector, legacy)) > 0.1
+    assert max(abs(a - b) for a, b in zip(vector, legacy, strict=False)) > 0.1
 
 
 def test_the_error_is_the_shortest_turn_and_zero_for_the_same_orientation() -> None:
