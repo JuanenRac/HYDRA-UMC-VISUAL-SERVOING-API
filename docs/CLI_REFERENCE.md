@@ -267,6 +267,8 @@ Always `200` for a real computed command; `400` for a missing/malformed
 field (missing `current`/`target`, an unparseable pose string, or an
 out-of-range numeric field).
 
+**`POST /ibvs/correct`** — only with `ibvs.enabled` true in the configuration file (404 otherwise). `features` and `desired` are lists of 3 to 32 `[x, y]` points in normalized image coordinates, `depth` the estimated distance in metres along the optical axis (one number or one per point); `gain`, `max_linear_speed`, `max_angular_speed` can only tighten the server's limits and `feature_tol` (0.002) sets when to stop. Answers `feature_rms`, a `command` (camera frame, with `hold`, `issued_at_ms`, `valid_for_ms` and `seq`, as `/correct`) and `converged`.
+
 **`POST /request`** — same fields as the CLI's `request` flags, as JSON;
 response body is `{"outcome", "reason", "error", "command", "converged"}`.
 `command` is never `null`: when `outcome` isn't `ACCEPTED`, or the pose has

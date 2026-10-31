@@ -2,5 +2,9 @@
   "orientation": {
     "error": "quaternion",
     "frame": "base"
+  },
+  "ibvs": {
+    "enabled": false,
+    "damping": 0.0001
   }
 }

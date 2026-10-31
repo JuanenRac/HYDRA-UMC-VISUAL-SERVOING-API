@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-208%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-240%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.1` |
 | Reifegrad | Funktionsfähig |
-| Tests | 208 (`python -m pytest -q tests`) |
+| Tests | 240 (`python -m pytest -q tests`) |
 | Technik | Python / 6-DOF pose estimation |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -51,7 +51,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Funktioniert für seinen Hauptzweck; die Ehrlichkeitsprüfung oben nennt, was noch fehlt |
-| Tests | 🟢 | 208 automatische Tests, bei jeder Änderung ausgeführt |
+| Tests | 🟢 | 240 automatische Tests, bei jeder Änderung ausgeführt |
 | Echte Hardware | 🔴 | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
 | Dokumentation | 🟢 | README in acht Sprachen, bei jeder Änderung gegen das Manifest geprüft |
 
@@ -123,7 +123,7 @@ Benötigt Python 3.10 oder neuer.
 
 ## 🧪 Tests
 
-208 automatische Tests laufen mit `python -m pytest -q tests`. Sie brauchen weder Hardware noch etwas außerhalb dieses Rechners.
+240 automatische Tests laufen mit `python -m pytest -q tests`. Sie brauchen weder Hardware noch etwas außerhalb dieses Rechners.
 
 Die CI führt `HYDRA_UMC_CI=1 python tools/ci_validate.py` aus; das prüft das Manifest, die Dokumente, die acht READMEs und die Bilder.
 
@@ -231,7 +231,7 @@ nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 `READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
 über den `request`-CLI-Befehl; sowie eine echte HailoRT-Integrationsgrenze
 (`hailo_runtime.py`), bereit für einen echten Hailo-8-Pose-Schätzer, sobald
-dieser angeschlossen wird. Insgesamt 208 Tests.
+dieser angeschlossen wird. Insgesamt 240 Tests.
 
 **Noch offen, blockiert durch echte Hardware:** die
 6-Freiheitsgrad-Posen-*schätzung* tatsächlich über `hailo_runtime.py`

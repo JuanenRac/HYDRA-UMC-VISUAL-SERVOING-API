@@ -35,6 +35,7 @@ from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequ
 from datetime import datetime, timezone
 
 from .authorization import SDK_SAFETY_STATES, READY_SAFETY_STATE
+from .ibvs import IbvsPolicy, compute_ibvs_command
 from .limits import ServoLimits
 from .pose import Pose6D, PoseParseError
 from .servo import VelocityCommand, compute_pose_error, compute_velocity_command, is_converged
@@ -229,6 +230,8 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_correct(body)
         elif path == "/request":
             self._handle_request(body)
+        elif path == "/ibvs/correct" and self.server.ibvs.enabled:
+            self._handle_ibvs(body)
         elif path == "/sessions":
             self._handle_session_open(body)
         elif path.startswith("/sessions/") and path.count("/") == 3:
@@ -481,6 +484,28 @@ class Handler(BaseHTTPRequestHandler):
         payload = self._command_payload(ZERO_COMMAND if converged else command, frame_id, hold=converged)
         _write_json(self, 200, {"error": asdict(error), "command": payload, "converged": converged})
 
+    def _handle_ibvs(self, body: dict) -> None:
+        """Image-based correction (ibvs.py): features in normalized image coordinates -> a camera-frame velocity, bounded like /correct."""
+        try:
+            effective = self._effective_limits(body)
+            frame_id = body.get("frame_id")
+            if frame_id is not None and not isinstance(frame_id, str):
+                raise ValueError("frame_id must be a string")
+            command, rms = compute_ibvs_command(
+                body["features"], body["desired"], body["depth"],
+                gain=effective["gain"], damping=self.server.ibvs.damping,
+                max_linear_speed=effective["max_linear_speed"], max_angular_speed=effective["max_angular_speed"],
+            )
+            converged = rms <= _number(body, "feature_tol", 0.002)
+        except KeyError as e:
+            _write_error(self, 400, f"missing required field: {e}")
+            return
+        except (ValueError, TypeError) as e:
+            _write_error(self, 400, str(e))
+            return
+        payload = self._command_payload(ZERO_COMMAND if converged else command, frame_id, hold=converged)
+        _write_json(self, 200, {"feature_rms": rms, "command": payload, "converged": converged, "frame": "camera"})
+
     def _handle_request(self, body: dict) -> None:
         poses = self._parse_poses(body)
         if poses is None:
@@ -553,8 +578,11 @@ class VisualServoingServer(ThreadingHTTPServer):
         token: str = "",
         accept_legacy_safety_string: bool | None = None,
         safety_zones: SafetyZonesClient | None = None,
+        ibvs: IbvsPolicy | None = None,
     ) -> None:
         super().__init__(address, Handler)
+        # the image-based law (ibvs.py); POST /ibvs/correct answers 404 unless it is enabled
+        self.ibvs = ibvs or IbvsPolicy()
         # when set, the safety state is asked of SAFETY-ZONES and what the caller says is ignored
         self.safety_zones = safety_zones
         self.accept_legacy_safety_string = (
