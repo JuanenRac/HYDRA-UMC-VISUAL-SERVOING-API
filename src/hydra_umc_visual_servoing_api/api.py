@@ -29,6 +29,7 @@ from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+from .service_metrics import MetricsHandlerMixin
 from .access import authorized, reject
 from .safety_source import SafetyZonesClient
 from .state_verification import StateVerifier
@@ -170,8 +171,9 @@ def resolve_safety_state(raw: object, *, max_age_ms: float, accept_legacy_string
     return state, None
 
 
-class Handler(BaseHTTPRequestHandler):
+class Handler(MetricsHandlerMixin, BaseHTTPRequestHandler):
     server: "VisualServoingServer"
+    metrics_service = "hydra-umc-visual-servoing-api"
 
     # Seconds a client may stay silent on its connection before the server
     # drops it, so a client that connects and sends nothing cannot hold a
@@ -182,6 +184,8 @@ class Handler(BaseHTTPRequestHandler):
         pass  # quiet by default, same reasoning as this family's other api.py files
 
     def do_GET(self) -> None:  # noqa: N802
+        if self.serve_metrics(authorized=authorized(self, self.server.token)):
+            return
         # the health path of the manifest stays open so the service registry can probe the service without the token
         if urlparse(self.path).path != HEALTH_PATH and not authorized(self, self.server.token):
             reject(self)

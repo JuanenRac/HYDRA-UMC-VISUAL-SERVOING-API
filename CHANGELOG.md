@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **`GET /metrics` in the text format of Prometheus:** the version, the uptime, the responses by class of status (2xx to 5xx) and the health, the aggregate of the checks of the service; only numbers about the service, never a path, an address, a token or a body. Behind the bearer token when the service has one. The code is the canonical `service_metrics.py` of HYDRA-UMC-SDK, copied byte for byte. 4 tests against a real server.
+
 - **The signed verdict of SAFETY-ZONES can be required (off by default):** `safety_state_verification` in the configuration file (`enabled`, `alg` hmac or ed25519, `key_file`, `key_id`, `max_age_ms`) makes the service act only on a verdict read from SAFETY-ZONES that carries `sdkSafetyStateSignature`, is signed with the expected algorithm and key id, is not older than `max_age_ms` and not older than one already read. A verdict that is unsigned, forged, signed with the other algorithm, expired or replayed is `INHIBITED`. The same verdict read again while it is fresh is not a replay. It needs `--safety-zones-url` (the start fails without it) and, for Ed25519, the `cryptography` package.
 ## [0.2.2] - Image-based servoing and a record of the corrections, both off by default, the orientation error as a real rotation and the safety state asked of the safety zones service
 
