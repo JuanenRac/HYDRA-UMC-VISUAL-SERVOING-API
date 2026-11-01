@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-246%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-261%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.2` |
 | Maturity | Functional |
-| Tests | 246 (`python -m pytest -q tests`) |
+| Tests | 261 (`python -m pytest -q tests`) |
 | Stack | Python / 6-DOF pose estimation |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
@@ -51,7 +51,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Area | State | What it means here |
 |---|---|---|
 | Software | 🟡 | Works for its main purpose; the honesty check above lists what is still missing |
-| Tests | 🟢 | 246 automated tests, run on every change |
+| Tests | 🟢 | 261 automated tests, run on every change |
 | Real hardware | 🔴 | Not yet: no run on real hardware is recorded for this version |
 | Documentation | 🟢 | README in eight languages, checked against the manifest on every change |
 
@@ -73,6 +73,7 @@ It is designed to support both **Eye-in-Hand** (camera on tool) and **Eye-to-Han
 * ⚡ **Hardware Accelerated:** Uses Hailo-8 output for instant coordinate calculation. *(future work, same reason.)*
 * 🔌 **HailoRT integration boundary, prepared ahead of the module:** `hailo_runtime.py` is written against the real, confirmed `hailo_platform` API (`VDevice`, `HEF`, `ConfigureParams`) - lazily imported so this repo installs/tests cleanly with no `hailort` package or Hailo-8 module present - and `hailo_output_to_pose()` adapts a real inference result straight into the `Pose6D` `compute_pose_error()` already consumes. *(implemented, integration boundary only - actually running inference still needs a real compiled pose-estimation `.hef` and a physical Hailo-8 module.)*
 * 🔐 **Pose model from verified bytes:** the Hailo pose model can be built from the bytes `HYDRA-UMC-DETECTION-HEF` already read and checked, hashed again here, and the path is never reopened; empty or different bytes are refused. *(No model has run on a Hailo chip yet.)*
+* 🔏 **Signed verdict of SAFETY-ZONES (optional, off by default):** with `safety_state_verification` switched on in the configuration file, the verdict read from SAFETY-ZONES must be signed (HMAC-SHA256 or Ed25519 with the public key), with the expected key id, fresh and not older than one already read; anything unsigned, forged, signed with the other algorithm, expired or replayed is `INHIBITED`, never READY.
 
 ## 🧩 Role in HYDRA-UMC
 
@@ -123,7 +124,7 @@ Requires Python 3.10 or newer.
 
 ## 🧪 Testing
 
-246 automated tests run with `python -m pytest -q tests`. They need no hardware and nothing outside this machine.
+261 automated tests run with `python -m pytest -q tests`. They need no hardware and nothing outside this machine.
 
 The CI runs `HYDRA_UMC_CI=1 python tools/ci_validate.py`, which checks the manifest, the documents, the eight READMEs and the pictures.
 
@@ -228,7 +229,7 @@ safety-gated authorization policy (`authorization.py`) that refuses to
 turn a visual detection into motion unless the upstream safety state is
 `READY` and the data is confident/fresh enough, exposed via the `request`
 CLI command; and a real HailoRT integration boundary (`hailo_runtime.py`)
-ready for a real Hailo-8 pose estimator the moment it plugs in. 246 tests
+ready for a real Hailo-8 pose estimator the moment it plugs in. 261 tests
 total.
 
 **Still ahead, and blocked on real hardware:** actually running 6-DOF

@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The signed verdict of SAFETY-ZONES can be required (off by default):** `safety_state_verification` in the configuration file (`enabled`, `alg` hmac or ed25519, `key_file`, `key_id`, `max_age_ms`) makes the service act only on a verdict read from SAFETY-ZONES that carries `sdkSafetyStateSignature`, is signed with the expected algorithm and key id, is not older than `max_age_ms` and not older than one already read. A verdict that is unsigned, forged, signed with the other algorithm, expired or replayed is `INHIBITED`. The same verdict read again while it is fresh is not a replay. It needs `--safety-zones-url` (the start fails without it) and, for Ed25519, the `cryptography` package.
 ## [0.2.2] - Image-based servoing and a record of the corrections, both off by default, the orientation error as a real rotation and the safety state asked of the safety zones service
 
 - **A record of the corrections for tuning offline (off by default):** with `servo_log.file` set in `configs/visual-servoing.json`, every correction that `POST /request` decides appends one JSON line (instant, frame id, outcome and reason, the norms of the pose error, the command and whether it was held, and how long the decision took). No image, pose values or token are written, and a file that cannot be written never stops a correction. Nothing is written while the file name is empty.

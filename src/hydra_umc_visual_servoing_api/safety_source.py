@@ -43,6 +43,11 @@ class SafetyZonesClient:
 
     def latest_state(self) -> tuple[object | None, str | None]:
         """(the SafetyState object, None) or (None, why there is none)."""
+        state, _signature, why = self.latest_verdict()
+        return state, why
+
+    def latest_verdict(self) -> tuple[object | None, object | None, str | None]:
+        """(the SafetyState object, its signature if the answer has one, None) or (None, None, why there is none)."""
         request = urllib.request.Request(self.base_url + STATE_PATH, method="GET")
         if self.token:
             request.add_header("Authorization", f"Bearer {self.token}")
@@ -51,17 +56,17 @@ class SafetyZonesClient:
                 raw = response.read(MAX_BODY_BYTES + 1)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
-                return None, "SAFETY-ZONES has not reached a verdict yet"
-            return None, f"SAFETY-ZONES answered HTTP {exc.code}"
+                return None, None, "SAFETY-ZONES has not reached a verdict yet"
+            return None, None, f"SAFETY-ZONES answered HTTP {exc.code}"
         except (urllib.error.URLError, OSError, ValueError) as exc:
-            return None, f"SAFETY-ZONES is not reachable ({type(exc).__name__})"
+            return None, None, f"SAFETY-ZONES is not reachable ({type(exc).__name__})"
         if len(raw) > MAX_BODY_BYTES:
-            return None, "SAFETY-ZONES answered with a body that is too large"
+            return None, None, "SAFETY-ZONES answered with a body that is too large"
         try:
             body = json.loads(raw)
         except ValueError:
-            return None, "SAFETY-ZONES did not answer with JSON"
+            return None, None, "SAFETY-ZONES did not answer with JSON"
         state = body.get("sdkSafetyState") if isinstance(body, dict) else None
         if not isinstance(state, dict):
-            return None, "SAFETY-ZONES answered without a SafetyState"
-        return state, None
+            return None, None, "SAFETY-ZONES answered without a SafetyState"
+        return state, body.get("sdkSafetyStateSignature"), None

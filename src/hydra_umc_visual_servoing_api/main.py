@@ -46,6 +46,7 @@ from .servo_log import ServoLogError, load_servo_log_policy
 from .orientation import OrientationConfigError, load_orientation_policy, set_active_policy
 from .pose import Pose6D, PoseParseError
 from .safety_source import DEFAULT_TIMEOUT_MS, SafetyZonesClient
+from .state_verification import StateVerificationError, StateVerifier, load_state_verification_policy
 from .servo import compute_pose_error, compute_velocity_command, is_converged
 
 PROJECT_NAME = "HYDRA-UMC-VISUAL-SERVOING-API"
@@ -200,10 +201,22 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         except (ValueError, OSError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+    verifier = None
+    try:
+        verification = load_state_verification_policy(args.config)
+        if verification.enabled:
+            if zones_client is None:
+                raise StateVerificationError("safety_state_verification is enabled but there is no SAFETY-ZONES address (--safety-zones-url)")
+            verifier = StateVerifier(verification)
+    except StateVerificationError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     server = VisualServoingServer(
         (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string,
-        safety_zones=zones_client, ibvs=ibvs_policy, servo_log=log_policy,
+        safety_zones=zones_client, ibvs=ibvs_policy, servo_log=log_policy, state_verifier=verifier,
     )
+    if verifier is not None:
+        print(f"[visual-servoing-api] the verdict of SAFETY-ZONES must be signed ({verifier.policy.alg}); anything unsigned, forged, old or replayed is INHIBITED")
     if zones_client is not None:
         print(f"[visual-servoing-api] the safety state is asked of SAFETY-ZONES at {zones_client.base_url}; what a caller says about it is ignored, and a request needs captured_at_utc")
     print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port} ({'Bearer token required' if token else 'no token, loopback only'})")

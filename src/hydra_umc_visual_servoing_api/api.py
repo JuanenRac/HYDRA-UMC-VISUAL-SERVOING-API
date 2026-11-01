@@ -31,6 +31,7 @@ from urllib.parse import urlparse
 
 from .access import authorized, reject
 from .safety_source import SafetyZonesClient
+from .state_verification import StateVerifier
 from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
 from datetime import datetime, timezone
 
@@ -310,9 +311,15 @@ class Handler(BaseHTTPRequestHandler):
         client = self.server.safety_zones
         if client is not None:
             # the caller's own claim is ignored: the verdict is SAFETY-ZONES's, with the time it was reached
-            state, why = client.latest_state()
+            state, signature, why = client.latest_verdict()
             if state is None:
                 return "INHIBITED", why
+            verifier = self.server.state_verifier
+            if verifier is not None:
+                # only a verdict that is signed, genuine, fresh and not replayed is acted on
+                accepted, reason = verifier.check(state, signature)
+                if not accepted:
+                    return "INHIBITED", reason
             return resolve_safety_state(
                 state, max_age_ms=self.server.limits.max_safety_age_ms, accept_legacy_string=False
             )
@@ -590,8 +597,11 @@ class VisualServoingServer(ThreadingHTTPServer):
         safety_zones: SafetyZonesClient | None = None,
         ibvs: IbvsPolicy | None = None,
         servo_log: ServoLogPolicy | None = None,
+        state_verifier: StateVerifier | None = None,
     ) -> None:
         super().__init__(address, Handler)
+        # when set, the verdict of SAFETY-ZONES must carry a valid signature (state_verification.py); off by default
+        self.state_verifier = state_verifier
         # one JSON line per decided correction for tuning offline (servo_log.py); writes nothing by default
         self.servo_log = ServoLog(servo_log or ServoLogPolicy())
         # the image-based law (ibvs.py); POST /ibvs/correct answers 404 unless it is enabled

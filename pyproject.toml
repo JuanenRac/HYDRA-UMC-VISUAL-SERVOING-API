@@ -17,7 +17,9 @@ dependencies = []
 # header) so this extra is only needed to actually run inference against
 # a real Hailo-8 module - never to import or test this package.
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+# ed25519: verifying a verdict of SAFETY-ZONES signed with an asymmetric key (safety_state_verification.alg = ed25519)
+ed25519 = ["cryptography>=42"]
+dev = ["pytest>=8.0", "cryptography>=42"]
 hailo = ["hailort"]
 
 [project.scripts]
