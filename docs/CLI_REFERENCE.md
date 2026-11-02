@@ -292,6 +292,29 @@ Any other path, or any non-`GET`/`POST` request, is `404`. There is no
 authentication - same as every other loopback-only internal API on the
 CM5.
 
+## `bench --bench-config FILE [--sweep] [--trace]`
+
+Closes the servoing loop against a simulated tool and prints the result as JSON, so a gain can be tried before a real robot (a simulation: the file says what the tool is like and nothing is
+read from the code). `--sweep` runs once for every gain of `sweep.gains` (or the gain of the session when there is none) and leaves out the trace; `--trace` adds the error over time (at most 600 points)
+to a single run. Exit code `0` when the run meets the limits of the file (for `--sweep`, when at least one gain does), `1` when it does not, `2` for a bad file.
+
+| Section | Keys (all numbers; defaults in brackets) |
+|---|---|
+| `session` | `gain`, `max_linear_speed`, `max_angular_speed` (required), `period_s`, `max_gain_period`, `filter_alpha`, `hysteresis`, `vision_timeout_s`, `max_linear_acceleration`, `max_angular_acceleration`, `linear_tolerance`, `angular_tolerance` (those of a servoing session) |
+| `plant` | `command_delay_s` (0.05), `lag_s` (0.05), `velocity_scale` (1), `noise_linear_m` (0), `noise_angular_rad` (0), `dropout_probability` (0), `valid_for_ms` (250) |
+| `scenario` | `start`, `target` (lists of x, y, z in meters and roll, pitch, yaw in radians; required), `duration_s` (10), `seed` (1), `integration_step_s` (0.01) |
+| `limits` | `max_settle_s` (8), `max_overshoot_m` (0.005), `max_overshoot_rad` (0.05), `max_peak_linear_speed` (0.25), `max_peak_angular_speed` (0.5) |
+| `sweep` | `gains`: at most 50 numbers |
+
+The answer has `ok`, `problems` (what is outside the limits, in words), `settled`, `settle_time_s`, `overshoot_m`, `max_angular_error_rad`, the final errors, the peak speeds and accelerations of the tool and the number of ticks in each
+state of the session (`tracking`, `holding`, `restarted`, `vision_lost`). The angular velocity is expressed in the frame the service is configured with (`orientation.frame`). It is a kinematic model of the tool in Cartesian space:
+no joints, no collisions, no dynamics; it does not replace the digital twin.
+
+## `serve --require-contract`
+
+With `--require-contract` (off by default) `POST /request` and the request step of a session only take messages that declare `schema_version: "1.0"` and follow the `VisualTargetRequest` contract of the SDK (`400` with the reason
+otherwise). Without it a request that declares `schema_version` is checked all the same, and one that does not is handled as before. Every command carries `schema_version: "1.0"` and follows the `VelocityCommand` contract.
+
 ## Exit codes
 
 | Code | Meaning |

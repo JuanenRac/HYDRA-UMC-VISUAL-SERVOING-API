@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-261%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-329%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | バージョン | `0.2.2` |
 | 成熟度 | 機能する |
-| テスト | 261 (`python -m pytest -q tests`) |
+| テスト | 329 (`python -m pytest -q tests`) |
 | 技術 | Python / 6-DOF pose estimation |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | 主な目的では動作します。足りない点は上の正直さの確認に書かれています |
-| テスト | 🟢 | 自動テスト 261 件。変更のたびに実行されます |
+| テスト | 🟢 | 自動テスト 329 件。変更のたびに実行されます |
 | 実機 | 🔴 | まだです：このバージョンについて実機での動作記録はありません |
 | インターフェースとプロトコル | 🟡 | 提供するルートやメッセージは文書化され、クライアントで試験済みです。すべてのクライアントがまだ使ったわけではありません |
 | 連携 | 🟠 | CM5 のテストベンチで他のサービスと一緒に動作し、メッセージは SDK の共通契約に従います |
@@ -81,6 +81,8 @@ GPL-3.0-or-later - see LICENSE
 * 🔌 **モジュールに先立って準備されたHailoRT統合境界：** `hailo_runtime.py` は、実際の確認済み `hailo_platform` API(`VDevice`、`HEF`、`ConfigureParams`)に対して書かれています —— `hailort` パッケージやHailo-8モジュールが存在しなくてもこのリポジトリがクリーンにインストール/テストできるよう遅延インポートされており、`hailo_output_to_pose()` は実際の推論結果を、`compute_pose_error()` がすでに消費している `Pose6D` に直接変換します。*(実装済み、統合境界のみ —— 実際に推論を実行するには、実際にコンパイルされた姿勢推定用 `.hef` と物理的なHailo-8モジュールがまだ必要です。)*
 * 🔐 **検証済みバイト列からのポーズモデル:** Hailo のポーズモデルは、`HYDRA-UMC-DETECTION-HEF` がすでに読んで確認したバイト列から(ここで再度ハッシュを確認して)組み立てられ、パスは二度と開き直されません。空のバイト列や異なるバイト列は拒否されます。*(Hailo チップ上でモデルを実行したことはまだありません。)*
 * 🔏 **SAFETY-ZONES の署名付き判定（任意、既定はオフ）：** 設定ファイルで `safety_state_verification` を有効にすると、SAFETY-ZONES から読んだ判定は署名付き（HMAC-SHA256、または公開鍵による Ed25519）で、期待するキー ID を持ち、新しく、すでに読んだものより古くないことが必要です。署名なし、偽造、別のアルゴリズムでの署名、期限切れ、再送されたものはすべて `INHIBITED` であり、READY にはなりません。
+* 📜 **リクエストとコマンドの SDK 契約：** すべてのコマンドは `schema_version` を持ち、送信前に `VelocityCommand` で検証されます。`schema_version` を宣言したリクエストは `VisualTargetRequest` で検証されます（`--require-contract` は既定でオフで、宣言のないリクエストを拒否します）。
+* 🧪 **模擬ツールに対するベンチ（`bench`）：** 遅延、遅れ、ノイズ、検出の取りこぼし、指示より動かないツールを含めてループを閉じ、すべてファイルで設定して模擬時計で動かし、整定時間、オーバーシュート、ピーク、判定を報告します。`--sweep` はゲインの一覧を試します。運動学的な代役でありデジタルツインではありません。ツインとそのインターロックへの接続は今後の課題です。
 
 ## 🧩 HYDRA-UMC での役割
 
@@ -131,7 +133,7 @@ Python 3.10 以上が必要です。
 
 ## 🧪 テスト
 
-`python -m pytest -q tests` で自動テスト 261 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
+`python -m pytest -q tests` で自動テスト 329 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
 
 CI は `HYDRA_UMC_CI=1 python tools/ci_validate.py` を実行し、マニフェスト、文書、8 つの README、図を検査します。
 
@@ -237,7 +239,7 @@ HYDRA-UMC-VISUAL-SERVOING-API/
 することを拒否するセーフティゲート付き認可ポリシー（`authorization.py`）を
 `request` CLI コマンドとして実装済み。加えて、実際のHailoRT統合境界
 (`hailo_runtime.py`)も、実際のHailo-8姿勢推定器が接続され次第使える
-ように準備済みです。テストは合計 261 個。
+ように準備済みです。テストは合計 329 個。
 
 **まだ先で、実際のハードウェアに阻まれている：** `hailo_runtime.py` を通じて
 実際に 6 自由度姿勢*推定*を実行するには、実際にコンパイルされた姿勢推定用

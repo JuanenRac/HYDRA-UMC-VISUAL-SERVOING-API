@@ -34,6 +34,7 @@ from .access import authorized, reject
 from .safety_source import SafetyZonesClient
 from .state_verification import StateVerifier
 from .authorization import AuthorizationPolicy, RequestOutcome, VisualTargetRequest, authorize_correction
+from .contract import IDENTIFIER, SCHEMA_VERSION, ContractError, check_request_body, validate_velocity_command
 from datetime import datetime, timezone
 
 from .authorization import SDK_SAFETY_STATES, READY_SAFETY_STATE  # noqa: F401
@@ -303,13 +304,33 @@ class Handler(MetricsHandlerMixin, BaseHTTPRequestHandler):
         newer valid command within `valid_for_ms`."""
         payload = asdict(command)
         payload.update({
+            "schema_version": SCHEMA_VERSION,
             "hold": hold,
             "issued_at_ms": int(time.time() * 1000),
             "valid_for_ms": self.server.limits.valid_for_ms,
             "seq": self.server.next_sequence(),
             "frame_id": frame_id,
         })
+        # the command is checked against the VelocityCommand contract before it is sent: one that does not fit is a bug of this service and goes to nobody.
+        # (A frame id from an older caller that is not a plain identifier is kept as it came; the contract is checked without it.)
+        checked = dict(payload)
+        if checked["frame_id"] is not None and not IDENTIFIER.fullmatch(str(checked["frame_id"])):
+            checked["frame_id"] = None
+        validate_velocity_command(checked)
         return payload
+
+    def _request_contract_ok(self, body: dict) -> bool:
+        """A request that declares `schema_version` is checked against the VisualTargetRequest contract; with `--require-contract` one that does not declare it
+        is refused. Writes the 400 itself and returns False when the request is not accepted."""
+        try:
+            declared = check_request_body(body)
+        except ContractError as e:
+            _write_error(self, 400, f"the request does not follow the VisualTargetRequest contract: {e}")
+            return False
+        if not declared and self.server.require_contract:
+            _write_error(self, 400, "schema_version is required: this service only takes requests that follow the VisualTargetRequest contract")
+            return False
+        return True
 
     def _safety_state(self, body: dict) -> tuple[str, str | None]:
         client = self.server.safety_zones
@@ -398,6 +419,8 @@ class Handler(MetricsHandlerMixin, BaseHTTPRequestHandler):
             return
         if action not in ("correct", "request"):
             _write_error(self, 404, "not found")
+            return
+        if action == "request" and not self._request_contract_ok(body):
             return
         poses = self._parse_poses(body)
         if poses is None:
@@ -520,6 +543,8 @@ class Handler(MetricsHandlerMixin, BaseHTTPRequestHandler):
 
     def _handle_request(self, body: dict) -> None:
         started = time.monotonic()
+        if not self._request_contract_ok(body):
+            return
         poses = self._parse_poses(body)
         if poses is None:
             return
@@ -602,8 +627,11 @@ class VisualServoingServer(ThreadingHTTPServer):
         ibvs: IbvsPolicy | None = None,
         servo_log: ServoLogPolicy | None = None,
         state_verifier: StateVerifier | None = None,
+        require_contract: bool = False,
     ) -> None:
         super().__init__(address, Handler)
+        # when set, /request and the session request step only take messages that declare schema_version and follow the contract; off by default
+        self.require_contract = require_contract
         # when set, the verdict of SAFETY-ZONES must carry a valid signature (state_verification.py); off by default
         self.state_verifier = state_verifier
         # one JSON line per decided correction for tuning offline (servo_log.py); writes nothing by default

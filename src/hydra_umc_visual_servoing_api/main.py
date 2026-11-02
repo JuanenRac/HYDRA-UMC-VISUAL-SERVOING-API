@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -25,6 +26,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .access import bind_problem, load_token
 from .api import VisualServoingServer
+from .bench import BenchError, load_bench_config, run_bench, sweep_gains
 from .authorization import (
     AuthorizationPolicy,
     RequestOutcome,
@@ -158,6 +160,28 @@ def _cmd_request(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_bench(args: argparse.Namespace) -> int:
+    """Close the servoing loop against a simulated tool (bench.py) and print the result as JSON. Exit 0 when the run (or every run of the sweep that was
+    not refused) meets the limits of the file, 1 when one does not, 2 for a bad file."""
+    if not _apply_config(args):
+        return 2
+    try:
+        config = load_bench_config(args.bench_config)
+        if args.sweep:
+            result = sweep_gains(config)
+            ok = any(run["ok"] for run in result["runs"])
+        else:
+            result = run_bench(config)
+            ok = bool(result["ok"])
+            if not args.trace:
+                result.pop("trace")
+    except BenchError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, indent=2))
+    return 0 if ok else 1
+
+
 def _cmd_serve(args: argparse.Namespace) -> int:
     if not _apply_config(args):
         return 2
@@ -214,7 +238,10 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     server = VisualServoingServer(
         (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string,
         safety_zones=zones_client, ibvs=ibvs_policy, servo_log=log_policy, state_verifier=verifier,
+        require_contract=args.require_contract,
     )
+    if args.require_contract:
+        print("[visual-servoing-api] only requests that declare schema_version and follow the VisualTargetRequest contract are taken")
     if verifier is not None:
         print(f"[visual-servoing-api] the verdict of SAFETY-ZONES must be signed ({verifier.policy.alg}); anything unsigned, forged, old or replayed is INHIBITED")
     if zones_client is not None:
@@ -322,7 +349,19 @@ def _build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--safety-zones-timeout-ms", type=float, default=DEFAULT_TIMEOUT_MS, dest="safety_zones_timeout_ms",
                        help=f"how long to wait for SAFETY-ZONES, ms (default: {DEFAULT_TIMEOUT_MS:g})")
     serve.add_argument("--config", default=None, help="Configuration file with how the orientation error is computed (default: the file named by HYDRA_UMC_VISUAL_SERVOING_CONFIG, else quaternion error in the base frame)")
+    serve.add_argument("--require-contract", action="store_true", dest="require_contract",
+                       help="only take requests that declare schema_version and follow the VisualTargetRequest contract of the SDK (off by default: a request without schema_version is handled as before)")
     serve.set_defaults(func=_cmd_serve)
+
+    bench = subparsers.add_parser(
+        "bench",
+        help="Close the servoing loop against a simulated tool (delay, lag, noise, missed detections) to try gains before a real robot; every number comes from the file.",
+    )
+    bench.add_argument("--bench-config", required=True, dest="bench_config", help="JSON file with the session, the plant, the scenario, the limits and (optional) the gains to sweep")
+    bench.add_argument("--sweep", action="store_true", help="Run once for every gain of sweep.gains and report each run (without the trace)")
+    bench.add_argument("--trace", action="store_true", help="Include the error over time (at most 600 points) in the single run")
+    bench.add_argument("--config", default=None, help="Configuration file with how the orientation error is computed (default: the file named by HYDRA_UMC_VISUAL_SERVOING_CONFIG, else quaternion error in the base frame)")
+    bench.set_defaults(func=_cmd_bench)
 
     return parser
 

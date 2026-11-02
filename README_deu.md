@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Method-Eye--in--Hand%20%2F%20Eye--to--Hand-orange.svg" alt="Method">
   <img src="https://img.shields.io/badge/Sync-gRPC%20%2F%20SPI-yellow.svg" alt="Sync">
-  <img src="https://img.shields.io/badge/Tests-261%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-329%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.2` |
 | Reifegrad | Funktionsfähig |
-| Tests | 261 (`python -m pytest -q tests`) |
+| Tests | 329 (`python -m pytest -q tests`) |
 | Technik | Python / 6-DOF pose estimation |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -51,7 +51,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Funktioniert für seinen Hauptzweck; die Ehrlichkeitsprüfung oben nennt, was noch fehlt |
-| Tests | 🟢 | 261 automatische Tests, bei jeder Änderung ausgeführt |
+| Tests | 🟢 | 329 automatische Tests, bei jeder Änderung ausgeführt |
 | Echte Hardware | 🔴 | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
 | Schnittstelle und Protokolle | 🟡 | Die angebotenen Routen oder Nachrichten sind dokumentiert und mit einem Client getestet; noch nicht jeder Client hat sie benutzt |
 | Integration | 🟠 | Es läuft zusammen mit den anderen Diensten auf dem CM5-Prüfstand, und seine Nachrichten folgen den gemeinsamen Verträgen des SDK |
@@ -81,6 +81,8 @@ Es ist dafür ausgelegt, sowohl **Eye-in-Hand**- (Kamera am Werkzeug) als auch *
 * 🔌 **HailoRT-Integrationsgrenze, dem Modul vorausgehend vorbereitet:** `hailo_runtime.py` ist gegen die echte, bestätigte `hailo_platform`-API (`VDevice`, `HEF`, `ConfigureParams`) geschrieben - lazy importiert, sodass dieses Repository ohne installiertes `hailort`-Paket oder vorhandenes Hailo-8-Modul sauber installiert/getestet wird - und `hailo_output_to_pose()` passt ein echtes Inferenzergebnis direkt in das `Pose6D` an, das `compute_pose_error()` bereits konsumiert. *(implementiert, nur Integrationsgrenze - tatsächliche Inferenz auszuführen braucht weiterhin ein echtes, kompiliertes Pose-Schätzungs-`.hef` und ein physisches Hailo-8-Modul.)*
 * 🔐 **Posenmodell aus geprüften Bytes:** Das Hailo-Posenmodell kann aus den Bytes gebaut werden, die `HYDRA-UMC-DETECTION-HEF` schon gelesen und geprüft hat, hier erneut gehasht, und der Pfad wird nie wieder geöffnet; leere oder andere Bytes werden abgelehnt. *(Auf einem Hailo-Chip lief noch kein Modell.)*
 * 🔏 **Signiertes Urteil von SAFETY-ZONES (optional, standardmäßig aus):** ist `safety_state_verification` in der Konfigurationsdatei eingeschaltet, muss das von SAFETY-ZONES gelesene Urteil signiert sein (HMAC-SHA256 oder Ed25519 mit dem öffentlichen Schlüssel), die erwartete Schlüssel-ID tragen, frisch sein und nicht älter als ein bereits gelesenes; alles Unsignierte, Gefälschte, mit dem anderen Algorithmus Signierte, Abgelaufene oder Wiederholte ist `INHIBITED`, nie READY.
+* 📜 **Die SDK-Verträge für Anfrage und Befehl:** jeder Befehl trägt `schema_version` und wird vor dem Senden gegen `VelocityCommand` geprüft; eine Anfrage, die `schema_version` angibt, wird gegen `VisualTargetRequest` geprüft (`--require-contract`, standardmäßig aus, lehnt jede ab, die es nicht tut).
+* 🧪 **Ein Prüfstand gegen ein simuliertes Werkzeug (`bench`):** schließt die Regelschleife mit Verzögerung, Nachlauf, Rauschen, verpassten Erkennungen und einem Werkzeug, das sich weniger bewegt als befohlen, alles aus einer Datei und mit simulierter Uhr, und meldet Einschwingzeit, Überschwingen, Spitzen und ein Urteil; `--sweep` probiert eine Liste von Verstärkungen. Ein kinematischer Ersatz, nicht der digitale Zwilling: die Kopplung an den Zwilling und seine Verriegelung steht noch aus.
 
 ## 🧩 Rolle in HYDRA-UMC
 
@@ -131,7 +133,7 @@ Benötigt Python 3.10 oder neuer.
 
 ## 🧪 Tests
 
-261 automatische Tests laufen mit `python -m pytest -q tests`. Sie brauchen weder Hardware noch etwas außerhalb dieses Rechners.
+329 automatische Tests laufen mit `python -m pytest -q tests`. Sie brauchen weder Hardware noch etwas außerhalb dieses Rechners.
 
 Die CI führt `HYDRA_UMC_CI=1 python tools/ci_validate.py` aus; das prüft das Manifest, die Dokumente, die acht READMEs und die Bilder.
 
@@ -239,7 +241,7 @@ nur dann in Bewegung umwandelt, wenn der vorgelagerte Sicherheitszustand
 `READY` ist und die Daten vertrauenswürdig/frisch genug sind, verfügbar
 über den `request`-CLI-Befehl; sowie eine echte HailoRT-Integrationsgrenze
 (`hailo_runtime.py`), bereit für einen echten Hailo-8-Pose-Schätzer, sobald
-dieser angeschlossen wird. Insgesamt 261 Tests.
+dieser angeschlossen wird. Insgesamt 329 Tests.
 
 **Noch offen, blockiert durch echte Hardware:** die
 6-Freiheitsgrad-Posen-*schätzung* tatsächlich über `hailo_runtime.py`
