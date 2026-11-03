@@ -26,6 +26,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .access import bind_problem, load_token
 from .api import VisualServoingServer
+from .health_route import health_open_requested
 from .bench import BenchError, load_bench_config, run_bench, sweep_gains
 from .authorization import (
     AuthorizationPolicy,
@@ -255,6 +256,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     )
     print("[visual-servoing-api] POST /correct, POST /request, GET /stats")
     try:
+        server.health_open = health_open_requested(args.health_open)
         server.serve_forever()
     except KeyboardInterrupt:
         pass
@@ -322,6 +324,7 @@ def _build_parser() -> argparse.ArgumentParser:
              "subcommands run, reachable from a real caller instead of one-shot CLI args.",
     )
     serve.add_argument("--addr", default="127.0.0.1", help="address to bind the HTTP API to")
+    serve.add_argument("--health-open", action="store_true", help="answer GET /health (open to loopback, to other callers only with the bearer token); closed by default, or set HYDRA_UMC_VISUAL_SERVOING_API_HEALTH_OPEN=1")
     serve.add_argument("--port", type=int, default=8116, help="port for the HTTP API")
     serve.add_argument("--token-file", default=None, help="file with the bearer token every request must present (or the HYDRA_UMC_VISUAL_SERVOING_TOKEN environment variable). Needed to bind an address that is not loopback.")
     serve.add_argument("--min-confidence", type=float, default=DEFAULT_MIN_CONFIDENCE, dest="min_confidence",

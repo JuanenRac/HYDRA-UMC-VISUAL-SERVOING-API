@@ -331,3 +331,10 @@ core, are described in the project README's own roadmap but are not
 implemented yet — they need real Hailo-8 hardware this environment does
 not have. This CLI only ever consumes pose pairs and requests supplied
 directly on the command line.
+
+
+## `GET /health` (off by default)
+
+A uniform health route, the same in every service of the family. It is closed unless the operator opens it with `serve --health-open` or `HYDRA_UMC_VISUAL_SERVOING_API_HEALTH_OPEN=1`: closed, it answers `404 {"error": "not found"}` like any route that does not exist.
+
+Open, it answers `200` with `{"status": "ok", "service": "hydra-umc-visual-servoing-api", "version": "<version>"}` to a caller on loopback. A caller that is not on loopback must present the bearer token of the service (a service started without a token never answers one). The body never carries a path, a setting or a secret. The health path of the project manifest (`health_path`) is unchanged.
