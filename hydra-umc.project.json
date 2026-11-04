@@ -23,6 +23,6 @@
   "service": {
     "port": 8116,
     "systemd_unit": "hydra-umc-visual-servoing-api.service",
-    "health_path": "/stats"
+    "health_path": "/health"
   }
 }
