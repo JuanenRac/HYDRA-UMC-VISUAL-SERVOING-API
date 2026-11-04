@@ -24,5 +24,8 @@
     "port": 8116,
     "systemd_unit": "hydra-umc-visual-servoing-api.service",
     "health_path": "/health"
-  }
+  },
+  "depends_on": [
+    "HYDRA-UMC-VISION-NODE"
+  ]
 }
