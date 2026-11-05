@@ -17,6 +17,8 @@ import os
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
+from .server_identity import accepts
+
 TOKEN_ENV = "HYDRA_UMC_VISUAL_SERVOING_TOKEN"
 MIN_TOKEN_LENGTH = 16
 
@@ -52,8 +54,12 @@ def bind_problem(addr: str, token: str) -> str | None:
     return None
 
 
-def authorized(handler: BaseHTTPRequestHandler, expected: str) -> bool:
-    """True when no token is configured, or the request presents exactly that Bearer token."""
+def authorized(handler: BaseHTTPRequestHandler, expected: str, identity_key: bytes | None = None) -> bool:
+    """True when no token is configured, or the request presents exactly that Bearer token.
+
+    With the identity key of HYDRA-UMC-SERVER (server_identity.py) a valid signed token of the SERVER is accepted too, and nothing is open."""
+    if identity_key is not None:
+        return accepts(handler, expected, identity_key)
     if not expected:
         return True
     scheme, _, presented = handler.headers.get("Authorization", "").partition(" ")

@@ -188,10 +188,10 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         if self.serve_health(self.server.token):
             return
-        if self.serve_metrics(authorized=authorized(self, self.server.token)):
+        if self.serve_metrics(authorized=authorized(self, self.server.token, self.server.identity_key)):
             return
-        # the health path of the manifest stays open so the service registry can probe the service without the token
-        if urlparse(self.path).path != HEALTH_PATH and not authorized(self, self.server.token):
+        # the health path of the manifest stays open so the service registry can probe the service without the token, unless the identity of HYDRA-UMC-SERVER is on: then nothing is open
+        if (urlparse(self.path).path != HEALTH_PATH or self.server.identity_key is not None) and not authorized(self, self.server.token, self.server.identity_key):
             reject(self)
             return
         path = urlparse(self.path).path
@@ -201,7 +201,7 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             _write_error(self, 404, "not found")
 
     def do_DELETE(self) -> None:  # noqa: N802
-        if not authorized(self, self.server.token):
+        if not authorized(self, self.server.token, self.server.identity_key):
             reject(self)
             return
         parts = urlparse(self.path).path.strip("/").split("/")
@@ -214,7 +214,7 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             _write_error(self, 404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
-        if not authorized(self, self.server.token):
+        if not authorized(self, self.server.token, self.server.identity_key):
             reject(self)
             return
         path = urlparse(self.path).path
@@ -621,6 +621,7 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
 class VisualServoingServer(ThreadingHTTPServer):
 
     health_open: bool = False  # GET /health answers only when the operator opens it (health_route.py)
+    identity_key: bytes | None = None  # the signing key of HYDRA-UMC-SERVER, when the operator turned its identity on (server_identity.py)
     def __init__(
         self,
         address: tuple[str, int],

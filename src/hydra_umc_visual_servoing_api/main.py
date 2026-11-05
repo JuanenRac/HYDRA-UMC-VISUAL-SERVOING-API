@@ -27,6 +27,7 @@ from importlib.metadata import PackageNotFoundError, version
 from .access import bind_problem, load_token
 from .api import VisualServoingServer
 from .health_route import health_open_requested
+from .server_identity import identity_key_from
 from .bench import BenchError, load_bench_config, run_bench, sweep_gains
 from .authorization import (
     AuthorizationPolicy,
@@ -202,10 +203,11 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         return 1
     try:
         token = load_token(args.token_file)
+        identity_key = identity_key_from(args.identity_key_file)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    problem = bind_problem(args.addr, token)
+    problem = bind_problem(args.addr, token) if identity_key is None else None
     if problem:
         print(f"error: {problem}", file=sys.stderr)
         return 2
@@ -241,13 +243,14 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         safety_zones=zones_client, ibvs=ibvs_policy, servo_log=log_policy, state_verifier=verifier,
         require_contract=args.require_contract,
     )
+    server.identity_key = identity_key
     if args.require_contract:
         print("[visual-servoing-api] only requests that declare schema_version and follow the VisualTargetRequest contract are taken")
     if verifier is not None:
         print(f"[visual-servoing-api] the verdict of SAFETY-ZONES must be signed ({verifier.policy.alg}); anything unsigned, forged, old or replayed is INHIBITED")
     if zones_client is not None:
         print(f"[visual-servoing-api] the safety state is asked of SAFETY-ZONES at {zones_client.base_url}; what a caller says about it is ignored, and a request needs captured_at_utc")
-    print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port} ({'Bearer token required' if token else 'no token, loopback only'})")
+    print(f"[visual-servoing-api] HTTP API listening on {args.addr}:{args.port} ({'Bearer token required' if token else 'no token, loopback only'}{'; tokens of HYDRA-UMC-SERVER accepted, nothing is open' if identity_key is not None else ''})")
     print(
         f"[visual-servoing-api] limits fixed at start-up (a request can only tighten them): "
         f"min_confidence={limits.min_confidence} max_data_age_ms={limits.max_data_age_ms} "
@@ -324,6 +327,7 @@ def _build_parser() -> argparse.ArgumentParser:
              "subcommands run, reachable from a real caller instead of one-shot CLI args.",
     )
     serve.add_argument("--addr", default="127.0.0.1", help="address to bind the HTTP API to")
+    serve.add_argument("--identity-key-file", default=None, help="file with the signing key of HYDRA-UMC-SERVER (its JWT_SECRET): a valid token of the SERVER is then accepted, every route (GET /health and GET /stats too) demands an identity and a viewer may read but not change (off by default; or set HYDRA_UMC_VISUAL_SERVOING_API_IDENTITY_KEY_FILE)")
     serve.add_argument("--health-open", action="store_true", help="answer GET /health (open to loopback, to other callers only with the bearer token); closed by default, or set HYDRA_UMC_VISUAL_SERVOING_API_HEALTH_OPEN=1")
     serve.add_argument("--port", type=int, default=8116, help="port for the HTTP API")
     serve.add_argument("--token-file", default=None, help="file with the bearer token every request must present (or the HYDRA_UMC_VISUAL_SERVOING_TOKEN environment variable). Needed to bind an address that is not loopback.")

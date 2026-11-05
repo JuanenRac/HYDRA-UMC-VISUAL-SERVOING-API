@@ -84,6 +84,7 @@ GPL-3.0-or-later - see LICENSE
 * 📜 **请求与指令的 SDK 契约：** 每条指令都带有 `schema_version`，发送前按 `VelocityCommand` 检查；声明了 `schema_version` 的请求按 `VisualTargetRequest` 检查（`--require-contract` 默认关闭，开启后会拒绝未声明的请求）。
 * 🧪 **针对模拟工具的试验台（`bench`）：** 带着延迟、滞后、噪声、漏检以及比指令动得更少的工具来闭合回路，全部来自一个文件并使用模拟时钟，报告整定时间、超调、峰值和结论；`--sweep` 会试一组增益。这是运动学替身，不是数字孪生：与孪生及其联锁的耦合尚未完成。
 * 🩺 **统一的 `GET /health`，默认关闭：** `serve --health-open`（或 `HYDRA_UMC_VISUAL_SERVOING_API_HEALTH_OPEN=1`）使服务以 `{"status": "ok", "service": ..., "version": ...}` 响应 `GET /health`，家族中每个服务的响应体相同；没有该开关时，该路由像不存在的路由一样返回 `404`。非回环地址的调用方必须出示服务的 bearer 令牌，响应体不含路径、配置或密钥。
+* 🪪 **HYDRA-UMC-SERVER 的身份（默认关闭）：** `serve --identity-key-file 文件`（或 `HYDRA_UMC_VISUAL_SERVOING_API_IDENTITY_KEY_FILE=文件`）会让服务在自己的令牌之外，也接受服务器在登录时签发的已签名令牌：查看者只能读取而不能更改，没有凭据的请求即使在环回地址上也会被拒绝。不开启该开关时一切照旧。
 
 ## 🧩 在 HYDRA-UMC 中的角色
 
