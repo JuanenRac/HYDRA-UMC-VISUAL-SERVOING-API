@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The Hailo boundary is tested end to end against a stand-in `hailo_platform`:** `tests/test_hailo_runtime_fake_device.py` loads a pose model from a stand-in, builds it from the verified bytes without reopening the path, refuses empty bytes and bytes that do not match the checksum of the registry before the device is touched, and refuses any number of streams other than one in and one out. Simulator evidence only; a real compiled model and a real Hailo-8 are still untried.
 - **The build test of the repository compiles only on CI or when allowed:** for the stacks that compile (`rust`, `go`, `android`, `flutter`, `firmware-c`), `tools/build_test.py` prints `BUILD_TEST=SKIPPED` with exit status 2 on a plain PC, never a pass; `ALLOW_LOCAL_BUILD=1` allows it and a CI runner always may. The `python` and `node` stacks are not locked.
 
 ## [0.2.4] - The identity of HYDRA-UMC-SERVER, off by default (serve --identity-key-file FILE, or HYDRAUMCVISUALSERVOINGAPIIDENTITYKEYFILE): the service verifies the signed token (HS256 JWT with exp, username and role) that the server... (and 2 more changes)
