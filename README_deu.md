@@ -90,6 +90,8 @@ Es ist dafür ausgelegt, sowohl **Eye-in-Hand**- (Kamera am Werkzeug) als auch *
 
 **HYDRA-UMC-VISUAL-SERVOING-API** macht aus der Differenz zwischen einer aktuellen und einer Zielpose mit 6 Freiheitsgraden einen begrenzten Geschwindigkeitsbefehl, innerhalb einer Sitzung, die die Regelschleife kennt. Eine Anfrage wird nur beantwortet, wenn ihre Daten frisch genug und ihre Konfidenz hoch genug sind und der Sicherheitszustand Bewegung erlaubt; ein Aufrufer kann Grenzen verschärfen, nie lockern. Noch kommt keine Pose von einer Kamera.
 
+> **Plattform:** Wo dieses README CM5 sagt, ist der Pilotprüfstand gemeint, der heute läuft; die Zielplattform von HYDRA-UMC ist ein NVIDIA Jetson Orin NX 16 GB, ein Entwurf, der weder gebaut noch getestet wurde.
+
 ## 🏛️ Architektur
 
 <p align="center">

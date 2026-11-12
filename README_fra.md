@@ -90,6 +90,8 @@ Il est conçu pour prendre en charge les configurations **Eye-in-Hand** (caméra
 
 **HYDRA-UMC-VISUAL-SERVOING-API** transforme l'écart entre une pose courante et une pose cible à 6 degrés de liberté en une commande de vitesse bornée, dans une session qui se souvient de la boucle. Une requête n'est traitée que si ses données sont assez fraîches, sa confiance assez haute et l'état de sécurité autorise le mouvement ; un appelant peut durcir les limites, jamais les assouplir. Aucune pose ne vient encore d'une caméra.
 
+> **Plateforme :** là où ce README dit CM5, il s'agit du banc pilote qui fonctionne aujourd'hui ; la plateforme visée par HYDRA-UMC est un NVIDIA Jetson Orin NX 16 Go, une conception ni construite ni testée.
+
 ## 🏛️ Architecture
 
 <p align="center">

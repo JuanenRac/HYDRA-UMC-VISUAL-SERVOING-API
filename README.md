@@ -90,6 +90,8 @@ It is designed to support both **Eye-in-Hand** (camera on tool) and **Eye-to-Han
 
 **HYDRA-UMC-VISUAL-SERVOING-API** turns the difference between a current and a target 6-DOF pose into a bounded velocity command, inside a session that remembers the loop. A request is only answered when its data is fresh enough, its confidence high enough and the safety state allows motion; limits can be made stricter by a caller, never looser. No pose comes from a camera yet.
 
+> **Platform:** where this README says CM5, it means the pilot bench that runs today; the target platform of HYDRA-UMC is an NVIDIA Jetson Orin NX 16 GB, a design that has not been built or tested.
+
 ## 🏛️ Architecture
 
 <p align="center">

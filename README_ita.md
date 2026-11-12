@@ -90,6 +90,8 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 
 **HYDRA-UMC-VISUAL-SERVOING-API** trasforma la differenza tra una posa corrente e una posa obiettivo a 6 gradi di libertà in un comando di velocità limitato, dentro una sessione che ricorda il ciclo. Una richiesta riceve risposta solo se i suoi dati sono abbastanza freschi, la confidenza abbastanza alta e lo stato di sicurezza consente il movimento; un chiamante può irrigidire i limiti, mai allentarli. Nessuna posa arriva ancora da una telecamera.
 
+> **Piattaforma:** dove questo README dice CM5, intende il banco pilota che funziona oggi; la piattaforma di destinazione di HYDRA-UMC è un NVIDIA Jetson Orin NX da 16 GB, un progetto non costruito né provato.
+
 ## 🏛️ Architettura
 
 <p align="center">

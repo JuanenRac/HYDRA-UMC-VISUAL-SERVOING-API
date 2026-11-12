@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
 - **The command line is tested in the same process:** `tests/test_main_commands.py` (20 tests) calls `main()` directly, so the coverage run sees it (the earlier CLI tests run a child process). It checks `correct` (including a pose that does not parse), `request` (accepted, inhibited with 2, rejected with 1, values the request cannot hold), `bench` (JSON with and without the trace, limits not met, a bad file, the gain sweep), a configuration file that cannot be used, and every refusal of `serve` before the port is bound (limits, token, address, identity key, policy sections, SAFETY-ZONES client, a verified verdict without a SAFETY-ZONES address), plus the normal start with the switches off and with all of them on. The HTTP server is a stand-in: nothing listens. Coverage of `main.py` 58 to 99 %.
 - **The identity of the server is tested at its edges:** `tests/test_server_identity_edges.py` (60 tests) checks every reason a token is refused (shape, header, algorithm, signature, expiry, claims), the key files, the choice of key by flag or environment, the decision of `accepts` for each method and role, and the probe and its command line against a small local service. Line coverage of `server_identity.py` goes from 76 % to 98 %.
 

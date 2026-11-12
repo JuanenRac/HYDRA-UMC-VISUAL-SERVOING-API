@@ -90,6 +90,8 @@ GPL-3.0-or-later - see LICENSE
 
 **HYDRA-UMC-VISUAL-SERVOING-API** 把当前 6 自由度位姿与目标位姿之差转换为有界的速度指令，并在记住控制回路的会话中进行。只有当数据足够新、置信度足够高且安全状态允许运动时，请求才会得到回答；调用方可以收紧限制，但绝不能放宽。目前还没有来自摄像头的位姿。
 
+> **平台：** 本 README 中的 CM5 指的是目前正在运行的试验台；HYDRA-UMC 的目标平台是 NVIDIA Jetson Orin NX 16 GB，这是尚未制造或测试的设计。
+
 ## 🏛️ 架构
 
 <p align="center">
