@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+- **A visible simulation bench:** the bench of the loop (a simulated tool with delay, lag, noise, missed vision and a tool that moves less than told) now has its own workflow, "Simulation bench", which runs it on every change together with the session, the image-based servoing and the safety service integration, and `docs/SIMULATION.md` describes it. `tests/test_simulation_bench.py` runs the bench over forty cells of faults drawn from a fixed seed and states what must hold in every one: the speed of the tool never passes the limits of the session, nothing is not a number, a camera that never sees the target leaves the tool still, more noise never helps, a longer delay never settles sooner, and a gain the session refuses is reported as refused. The manifest now declares the evidence level `simulator`.
+- **The coverage of the tests is measured on every change:** the workflow "Coverage floor" runs the whole suite under line and branch coverage and fails when it falls under 93 %.
+- **The metrics text is tested at its edges:** `tests/test_service_metrics_edges.py` checks the labels, the escaping and the health of the service when a check fails.
+
 ## [0.2.5] - More tests of the command line, the identity and the Hailo boundary
 
 - **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
