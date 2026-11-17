@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **`serve --gated-only` closes the routes that take no safety state, and `serve --require-safety-zones` refuses to start without SAFETY-ZONES:** both are off by default. With the first, `/correct`, `/ibvs/correct` and the `correct` step of a session answer `403` (`gate-required`) and only the routes that carry a safety state stay; with the second, a service with no SAFETY-ZONES address stops with exit code `2` instead of believing the safety state the caller sends. Tests cover both.
+
 - **The SDK pin and the shared tools are up to date:** the SDK dependency names the newest release tag, and the shared tools are the canonical copies again.
 - **A visible simulation bench:** the bench of the loop (a simulated tool with delay, lag, noise, missed vision and a tool that moves less than told) now has its own workflow, "Simulation bench", which runs it on every change together with the session, the image-based servoing and the safety service integration, and `docs/SIMULATION.md` describes it. `tests/test_simulation_bench.py` runs the bench over forty cells of faults drawn from a fixed seed and states what must hold in every one: the speed of the tool never passes the limits of the session, nothing is not a number, a camera that never sees the target leaves the tool still, more noise never helps, a longer delay never settles sooner, and a gain the session refuses is reported as refused. The manifest now declares the evidence level `simulator`.
 - **The coverage of the tests is measured on every change:** the workflow "Coverage floor" runs the whole suite under line and branch coverage and fails when it falls under 93 %.

@@ -315,6 +315,10 @@ no joints, no collisions, no dynamics; it does not replace the digital twin.
 With `--require-contract` (off by default) `POST /request` and the request step of a session only take messages that declare `schema_version: "1.0"` and follow the `VisualTargetRequest` contract of the SDK (`400` with the reason
 otherwise). Without it a request that declares `schema_version` is checked all the same, and one that does not is handled as before. Every command carries `schema_version: "1.0"` and follows the `VelocityCommand` contract.
 
+## `serve --gated-only` and `serve --require-safety-zones`
+
+Both are off by default. With `--gated-only`, `POST /correct`, `POST /ibvs/correct` and the `correct` step of a session answer `403` with `"code": "gate-required"`: they take no safety state, so only `POST /request` and the `request` step of a session remain (use it with `--safety-zones-url`). With `--require-safety-zones` the service refuses to start (exit code `2`) when no SAFETY-ZONES address is given (`--safety-zones-url` or `HYDRA_UMC_SAFETY_ZONES_URL`); without a client the safety state would be the one the caller sends.
+
 ## Exit codes
 
 | Code | Meaning |
