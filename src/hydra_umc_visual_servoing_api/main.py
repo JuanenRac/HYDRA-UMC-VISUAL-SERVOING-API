@@ -228,6 +228,9 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         except (ValueError, OSError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+    if args.require_safety_zones and zones_client is None:
+        print("error: --require-safety-zones needs the address of SAFETY-ZONES (--safety-zones-url or HYDRA_UMC_SAFETY_ZONES_URL)", file=sys.stderr)
+        return 2
     verifier = None
     try:
         verification = load_state_verification_policy(args.config)
@@ -241,7 +244,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     server = VisualServoingServer(
         (args.addr, args.port), ROLE, limits, token, accept_legacy_safety_string=args.accept_legacy_safety_string,
         safety_zones=zones_client, ibvs=ibvs_policy, servo_log=log_policy, state_verifier=verifier,
-        require_contract=args.require_contract,
+        require_contract=args.require_contract, gated_only=args.gated_only,
     )
     server.identity_key = identity_key
     if args.require_contract:
@@ -358,6 +361,10 @@ def _build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--config", default=None, help="Configuration file with how the orientation error is computed (default: the file named by HYDRA_UMC_VISUAL_SERVOING_CONFIG, else quaternion error in the base frame)")
     serve.add_argument("--require-contract", action="store_true", dest="require_contract",
                        help="only take requests that declare schema_version and follow the VisualTargetRequest contract of the SDK (off by default: a request without schema_version is handled as before)")
+    serve.add_argument("--gated-only", action="store_true", dest="gated_only",
+                       help="answer 403 (code gate-required) on /correct, /ibvs/correct and the correct step of a session, which take no safety state; only the routes with the safety state remain (off by default; recommended with --safety-zones-url)")
+    serve.add_argument("--require-safety-zones", action="store_true", dest="require_safety_zones",
+                       help="refuse to start without the address of SAFETY-ZONES, so the safety state is never the one the caller says (off by default)")
     serve.set_defaults(func=_cmd_serve)
 
     bench = subparsers.add_parser(

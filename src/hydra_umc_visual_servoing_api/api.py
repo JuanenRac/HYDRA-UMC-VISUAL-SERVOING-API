@@ -423,6 +423,8 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
         if action not in ("correct", "request"):
             _write_error(self, 404, "not found")
             return
+        if action == "correct" and self._gate_required():
+            return
         if action == "request" and not self._request_contract_ok(body):
             return
         poses = self._parse_poses(body)
@@ -494,7 +496,16 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             payload.update(outcome_info)
         return payload
 
+    def _gate_required(self) -> bool:
+        """With --gated-only the routes that take no safety state of SAFETY-ZONES are closed (writes the 403 and returns True)."""
+        if not self.server.gated_only:
+            return False
+        _write_json(self, 403, {"error": "this service only answers requests that pass the safety gate (POST /request, or the request step of a session)", "code": "gate-required"})
+        return True
+
     def _handle_correct(self, body: dict) -> None:
+        if self._gate_required():
+            return
         poses = self._parse_poses(body)
         if poses is None:
             return
@@ -524,6 +535,8 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
 
     def _handle_ibvs(self, body: dict) -> None:
         """Image-based correction (ibvs.py): features in normalized image coordinates -> a camera-frame velocity, bounded like /correct."""
+        if self._gate_required():
+            return
         try:
             effective = self._effective_limits(body)
             frame_id = body.get("frame_id")
@@ -634,8 +647,11 @@ class VisualServoingServer(ThreadingHTTPServer):
         servo_log: ServoLogPolicy | None = None,
         state_verifier: StateVerifier | None = None,
         require_contract: bool = False,
+        gated_only: bool = False,
     ) -> None:
         super().__init__(address, Handler)
+        # when set, /correct, /ibvs/correct and the correct step of a session answer 403 (gate-required): only the routes with the safety state remain; off by default
+        self.gated_only = gated_only
         # when set, /request and the session request step only take messages that declare schema_version and follow the contract; off by default
         self.require_contract = require_contract
         # when set, the verdict of SAFETY-ZONES must carry a valid signature (state_verification.py); off by default
