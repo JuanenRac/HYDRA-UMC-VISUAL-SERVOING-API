@@ -54,7 +54,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Tests | 🟢 | 446 automated tests, run on every change |
 | Real hardware | 🟠 | Simulated only: tested against emulators, fakes or simulators; no run on real hardware is recorded for this version |
 | Interface and protocols | 🟡 | The routes or messages it offers are documented and tested with a client; not every client has used them yet |
-| Integration | 🟠 | It runs together with the other services on the CM5 test bench and its messages follow the shared contracts of the SDK |
+| Integration | 🟠 | Its messages and routes are checked against the shared contracts of the SDK; it has not run together with the real equipment |
 | Security | 🟡 | Access control, input limits or signatures are implemented and tested on a computer; nobody outside the project has reviewed them |
 | Deployment | 🟡 | Installed as a service on the CM5 test bench with its installer and unit; restarted on every update |
 | Operation | 🟡 | Exposes /metrics in the Prometheus text format with a health summary; it is not wired to a monitoring dashboard yet |
