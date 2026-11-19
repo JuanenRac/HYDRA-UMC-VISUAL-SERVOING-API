@@ -17,7 +17,7 @@
 # HYDRA-UMC-VISION-NODE's own docker-compose.yml as the
 # "visual-servoing-api" service.
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE.md ./
