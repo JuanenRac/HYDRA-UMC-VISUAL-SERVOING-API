@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A cut answer of SAFETY-ZONES means not reachable:** an answer cut in the middle, or one that is not HTTP, escaped as an unhandled error instead of being reported as a verdict that cannot be read.
+
 ## [0.2.6]
 
 - **`serve --gated-only` closes the routes that take no safety state, and `serve --require-safety-zones` refuses to start without SAFETY-ZONES:** both are off by default. With the first, `/correct`, `/ibvs/correct` and the `correct` step of a session answer `403` (`gate-required`) and only the routes that carry a safety state stay; with the second, a service with no SAFETY-ZONES address stops with exit code `2` instead of believing the safety state the caller sends. Tests cover both.
