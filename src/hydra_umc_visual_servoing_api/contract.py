@@ -29,7 +29,7 @@ MAX_VALID_FOR_MS = 60000
 REQUEST_REQUIRED = ("schema_version", "frame_id", "current", "target", "confidence", "safety_state")
 REQUEST_OPTIONAL = ("data_age_ms", "captured_at_utc", "calibration_version", "calibration_age_days")
 COMMAND_REQUIRED = ("schema_version", "vx", "vy", "vz", "wroll", "wpitch", "wyaw", "hold", "issued_at_ms", "valid_for_ms", "seq")
-COMMAND_OPTIONAL = ("frame_id",)
+COMMAND_OPTIONAL = ("frame_id", "gate",)
 # What this service reads from a request besides the contract: the limits a caller may ask to tighten and the tolerances of the loop.
 SERVICE_EXTRAS = ("gain", "min_confidence", "max_data_age_ms", "max_calibration_age_days", "max_linear_speed", "max_angular_speed", "linear_tol", "angular_tol")
 
@@ -126,6 +126,8 @@ def validate_velocity_command(payload: Any) -> None:
     frame_id = payload.get("frame_id")
     if frame_id is not None and not (isinstance(frame_id, str) and IDENTIFIER.fullmatch(frame_id)):
         raise ContractError("frame_id must be 1 to 64 letters, digits, dots, colons, dashes or underscores")
+    if "gate" in payload and payload["gate"] not in ("passed", "none"):
+        raise ContractError("gate must be passed or none")
 
 
 def command_is_current(payload: dict[str, Any], now_ms: int) -> bool:
