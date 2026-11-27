@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A command says whether it went through the safety gate:** every velocity command carries `gate`, `passed` for the ones of `POST /request` and the request step of a session (also its zero command) and `none` for the routes without a gate. The field is the optional one of the VelocityCommand contract of the SDK.
+
 - **Token and password files saved with a byte order mark are read:** a file written by an editor of Windows as "UTF-8 with BOM" kept the mark in front of the secret, so the credential was refused or could not be sent in a header. The mark is dropped now; a file in another encoding (UTF-16) is refused with a clear message. The same holds for the identity key file of the server (shared module of the SDK).
 - **A cut answer of SAFETY-ZONES means not reachable:** an answer cut in the middle, or one that is not HTTP, escaped as an unhandled error instead of being reported as a verdict that cannot be read.
 

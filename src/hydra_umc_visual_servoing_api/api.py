@@ -301,7 +301,7 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             "max_angular_speed": at_most("max_angular_speed", limits.max_angular_speed),
         }
 
-    def _command_payload(self, command: VelocityCommand, frame_id: str | None, hold: bool) -> dict:
+    def _command_payload(self, command: VelocityCommand, frame_id: str | None, hold: bool, gate: str = "none") -> dict:
         """A command always carries when it was issued, how long it is valid
         and a sequence number: a consumer must stop when it does not receive a
         newer valid command within `valid_for_ms`."""
@@ -313,6 +313,8 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             "valid_for_ms": self.server.limits.valid_for_ms,
             "seq": self.server.next_sequence(),
             "frame_id": frame_id,
+            # whether the safety gate of this service was in the path of this command ("passed" also for the zero command of a refusal)
+            "gate": gate,
         })
         # the command is checked against the VelocityCommand contract before it is sent: one that does not fit is a bug of this service and goes to nobody.
         # (A frame id from an older caller that is not a plain identifier is kept as it came; the contract is checked without it.)
@@ -489,7 +491,8 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             "converged": step.converged,
             "error": asdict(step.error) if step.error is not None else None,
             "filtered_pose": asdict(step.filtered) if step.filtered is not None else None,
-            "command": self._command_payload(step.command, frame_id, hold=step.state != "tracking" and step.state != "restarted"),
+            "command": self._command_payload(step.command, frame_id, hold=step.state != "tracking" and step.state != "restarted",
+                                             gate="passed" if outcome_info is not None else "none"),
             "updates": session.updates,
         }
         if outcome_info is not None:
@@ -609,11 +612,11 @@ class Handler(HealthRouteMixin, MetricsHandlerMixin, BaseHTTPRequestHandler):
             reason = f"frame '{request.frame_id}' was already used for a correction"
         accepted = outcome is RequestOutcome.ACCEPTED
         if accepted and not converged and decision.command is not None:
-            command = self._command_payload(decision.command, request.frame_id, hold=False)
+            command = self._command_payload(decision.command, request.frame_id, hold=False, gate="passed")
         else:
             # not authorised, or nothing left to correct: an explicit zero
             # command, never "no command", so the consumer stops
-            command = self._command_payload(ZERO_COMMAND, request.frame_id, hold=True)
+            command = self._command_payload(ZERO_COMMAND, request.frame_id, hold=True, gate="passed")
         if self.server.servo_log.enabled:
             self.server.servo_log.write(make_record(
                 issued_at_ms=command["issued_at_ms"], frame_id=request.frame_id, outcome=outcome.value, reason=reason,
