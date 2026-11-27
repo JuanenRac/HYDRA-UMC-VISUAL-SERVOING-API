@@ -39,7 +39,7 @@ def load_token(token_file: str | Path | None, environ: dict[str, str] | None = N
     token = env.get(TOKEN_ENV, "").strip()
     if token_file:
         try:
-            token = Path(token_file).read_text(encoding="utf-8").strip()
+            token = Path(token_file).read_text(encoding="utf-8-sig").strip()
         except (OSError, UnicodeDecodeError) as error:
             raise ValueError(f"cannot read the token file: {error}") from error
     if token and len(token) < MIN_TOKEN_LENGTH:
