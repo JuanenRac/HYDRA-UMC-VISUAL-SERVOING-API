@@ -223,7 +223,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         try:
             zones_token = os.environ.get("HYDRA_UMC_SAFETY_ZONES_TOKEN", "").strip()
             if args.safety_zones_token_file:
-                zones_token = Path(args.safety_zones_token_file).read_text(encoding="utf-8").strip()
+                zones_token = Path(args.safety_zones_token_file).read_text(encoding="utf-8-sig").strip()
             zones_client = SafetyZonesClient(zones_url, zones_token, args.safety_zones_timeout_ms)
         except (ValueError, OSError) as exc:
             print(f"error: {exc}", file=sys.stderr)
