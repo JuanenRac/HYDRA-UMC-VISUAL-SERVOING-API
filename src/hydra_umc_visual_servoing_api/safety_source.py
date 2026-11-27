@@ -13,6 +13,7 @@ INHIBITED, never READY.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import urllib.error
 import urllib.request
@@ -58,7 +59,7 @@ class SafetyZonesClient:
             if exc.code == 404:
                 return None, None, "SAFETY-ZONES has not reached a verdict yet"
             return None, None, f"SAFETY-ZONES answered HTTP {exc.code}"
-        except (urllib.error.URLError, OSError, ValueError) as exc:
+        except (urllib.error.URLError, OSError, ValueError, http.client.HTTPException) as exc:
             return None, None, f"SAFETY-ZONES is not reachable ({type(exc).__name__})"
         if len(raw) > MAX_BODY_BYTES:
             return None, None, "SAFETY-ZONES answered with a body that is too large"
